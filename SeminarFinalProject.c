@@ -18,7 +18,7 @@ int readCSV()
         printf("File opened successfully\n");
     }
     fclose (fp);
-    return 1;
+    return 0;
 }
 
 //บันทึกข้อมูลผู้เข้าร่วมสัมมนาลงไฟล์ CSV
@@ -36,7 +36,7 @@ int saveCSV(char *name, char *email, char *phone, char *regDate)
 
     fclose (fp);
     
-    return 1;
+    return 0;
 }
 
 //เพิ่มข้อมูลผู้เข้าร่วมใหม่
