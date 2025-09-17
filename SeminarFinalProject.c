@@ -182,7 +182,7 @@ int display_menu()
         printf("\n========= MENU ========== \n");
         printf("| 1. Show all information\n");
         printf("| 2. Add participants\n");
-        printf("| 3. Search for paticipants information\n");
+        printf("| 3. Search for participants information\n");
         printf("| 4. Exit\n");
         printf("---> Please select an option: ");
         scanf("%d", &choice);
