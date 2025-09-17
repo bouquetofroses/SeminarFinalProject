@@ -67,7 +67,8 @@ int add_info()
 int search_info()
 {
     FILE *fp = fopen("Seminar.csv","r");
-    if (fp == NULL)
+    FILE *temp = fopen("temp.csv","w");
+    if (fp == NULL || temp == NULL)
     {
     printf("File: %p\n",fp);
     printf("Cannot open the file\n");
@@ -85,16 +86,60 @@ int search_info()
     {
         if (strstr(line, keyword))
         {
-            printf("%s",line);
             found = 1;
+            printf("\nFound record : %s",line);
+
+            int choice;
+            printf("\nWhat do you want to do?\n");
+            printf("| 1. Update this record\n");
+            printf("| 2. Delete this record\n");
+            printf("| 3. Do nothing\n");
+            printf("---> Enter choice : ");
+            scanf("%d",&choice);
+
+            if (choice == 1)//อัพเดต
+            {
+                char newName[50];
+                char newEmail[50];
+                char newPhone[20];
+                char newDate[20];
+                printf("Enter new name : ");
+                scanf(" %[^\n]", newName);
+                printf("Enter new email: ");
+                scanf(" %[^\n]", newEmail);
+                printf("Enter new phone: ");
+                scanf(" %[^\n]", newPhone);
+                printf("Enter new date: ");
+                scanf(" %[^\n]", newDate);
+
+                fprintf(temp, "%s,%s,%s,%s\n", newName, newEmail, newPhone, newDate);
+                printf("Record update!\n");
+            }
+            else if (choice == 2)//ลบ
+            {
+                printf("Record deleted!\n");
+            }
+            else 
+            {
+                fprintf(temp,"%s",line);
+            }
+        }
+        else {
+            fprintf(temp, "%s",line);
         }
     }
+
+    fclose(fp);
+    fclose(temp);
+
+    remove("Seminar.csv");
+    rename("temp.csv", "Seminar.csv");
+
     if (!found)
     {
         printf("\n----> Data not found!, Please try seraching again\n");
         printf("\n----> You can search by name, email, phone number, or registration date\n");
     }
-    fclose(fp);
     return 1;
 }
 
@@ -138,9 +183,7 @@ int display_menu()
         printf("| 1. Show all information\n");
         printf("| 2. Add participants\n");
         printf("| 3. Search for paticipants information\n");
-        printf("| 4. Update paticipants information\n");
-        printf("| 5. Delete paticipants information\n");
-        printf("| 6. Exit\n");
+        printf("| 4. Exit\n");
         printf("---> Please select an option: ");
         scanf("%d", &choice);
         while(getchar()!='\n');
@@ -149,16 +192,11 @@ int display_menu()
             case 1: display_all(); break; //แสดงข้อมูลทั้งหมด
             case 2: add_info(); break; //เพิ่มข้อมูล
             case 3: search_info(); break; //ค้นหาข้อมูล
-            case 4: update_info(); break; //แก้ไขข้อมูล
-            case 5: delete_info(); break; //ลบข้อมูล
-            case 6: printf("\nExit program!\n"); break; 
+            case 4: printf("\nExit program!\n"); break; 
             default: printf("\nInvalid choice!\n");
         }
-    } while (choice != 6);
+    } while (choice != 4);
 }
-
-
-
 
 int main()
 {
