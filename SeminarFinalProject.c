@@ -7,14 +7,19 @@
 //สร้างไฟล์
 int createfile()
 {
-    FILE *fp = fopen("Seminar.csv","a");
-    fprintf(fp, "ParticipantName,Email,PhoneNumber,RegistrationDate\n");
-    if (fp==NULL){
-        printf("Cannot creat file\n");
-        return 0;
+    FILE *fp = fopen("Seminar.csv", "r");
+    if (fp == NULL) {  
+        fp = fopen("Seminar.csv", "w");
+        if (fp == NULL) {
+            printf("Cannot create file\n");
+            return 0;
+        }
+        fprintf(fp, "ParticipantName,Email,PhoneNumber,RegistrationDate\n");
+        fclose(fp);
+    } else {
+        fclose(fp);
     }
-    fclose (fp);
-    return 1 ;
+    return 1;
 }
 
 
@@ -77,7 +82,7 @@ int isLeapYear(int year) {
 }
 
 // ตรวจสอบความถูกต้องของวันที่
-int validateDate(int d, int m, int y) {
+int validateDate(int y, int m, int d) {
     if (y < 1900 || y > 2100) return 0;
     if (m < 1 || m > 12) return 0;
 
@@ -117,12 +122,20 @@ int add_info()
         if (!validatePhone(phone)) printf("Phone must start with 09/08/06 and be 10 digits!\n");
     } 
     while (!validatePhone(phone)); 
-       
+
     do 
     {
         printf("Please enter the registration date (YYYY-MM-DD): ");
-        scanf("%d-%d-%d", &y, &m, &d);
-        if (!validateDate(y,m,d)) printf("Invalid date!\n");
+    if (scanf("%d-%d-%d", &y, &m, &d) != 3) 
+    {
+        printf("Invalid format! Use YYYY-MM-DD\n");
+        while (getchar() != '\n'); // ล้างบัฟเฟอร์
+        continue;
+    }
+    if (!validateDate(y,m,d)) 
+    {
+        printf("Invalid date!\n");
+    }
     } 
     while (!validateDate(y,m,d));
     sprintf(regDate,"%04d-%02d-%02d",y,m,d);
