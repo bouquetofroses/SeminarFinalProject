@@ -191,84 +191,95 @@ int delete_info(char *line)
 int search_info()
 {
     FILE *fp = fopen("Seminar.csv","r");
-    FILE *temp = fopen("temp.csv","w");
-    if (fp == NULL || temp == NULL)
-    {
-        printf("File: %p\n",fp);
-        printf("Cannot open the file\n");
-        return 0;
-    }
+    if (!fp) { printf("Cannot open file!\n"); return 0; }
 
     char keyword [50];
     char line [200];
-    int found = 0;
+    char records[100][200]; // เก็บ record ที่ตรง keyword
+    int count = 0;
 
-    printf("Enter your Name/Email/PhoneNumber/RegistrationDate  : ");
-    scanf("%[^\n]",keyword);
+    printf("Enter Name/Email/Phone/Date to search: ");
+    scanf(" %[^\n]", keyword);
 
-    fgets(line,sizeof(line),fp); // header
-    fprintf(temp,"%s",line);
+    fgets(line,sizeof(line),fp); // อ่าน header
+    char header[200];
+    strcpy(header,line);
 
-    while (fgets(line, sizeof(line),fp))
-    {
-        if (strstr(line, keyword))
-        {
-            found = 1;
-            // แยก field
-            char name[50]="",email[50]="",phone[20]="",date[20]="";
-            char tmp[200];
-            strcpy(tmp,line);
-            char *token = strtok(tmp,","); if(token) strcpy(name,token);
-            token = strtok(NULL,","); if(token) strcpy(email,token);
-            token = strtok(NULL,","); if(token) strcpy(phone,token);
-            token = strtok(NULL,","); if(token) strcpy(date,token);
+    // เก็บ record ที่ตรง keyword
+    while (fgets(line,sizeof(line),fp)) {
+        if (strstr(line,keyword)) {
+            strcpy(records[count++],line);
+        }
+    }
+    fclose(fp);
 
-            // แสดงผลแบบ format ภาษาอังกฤษ
-            printf("\nParticipant Information\n");
-            printf("Name: %s\n", name);
-            printf("Email: %s\n", email);
-            printf("Phone Number: %s\n", phone);
-            printf("Registration Date: %s\n", date);
+    if (count == 0) {
+        printf("No record found!\n");
+        return 0;
+    }
 
+    // แสดง record ทั้งหมดพร้อม index
+    printf("\n--- Found %d record(s) ---\n", count);
+    for (int i=0;i<count;i++) {
+        char tmp[200];
+        strcpy(tmp,records[i]);
+        char name[50]="",email[50]="",phone[20]="",date[20]="";
+        char *token=strtok(tmp,","); if(token) strcpy(name,token);
+        token=strtok(NULL,","); if(token) strcpy(email,token);
+        token=strtok(NULL,","); if(token) strcpy(phone,token);
+        token=strtok(NULL,","); if(token) strcpy(date,token);
 
-            int choice;
-            printf("\nWhat do you want to do?\n");
-            printf("| 1. Update this information\n");
-            printf("| 2. Delete this information\n");
-            printf("| 3. Skip\n");
-            printf("---> Enter choice : ");
+        printf("\n[%d] Participant Information\n", i+1);
+        printf("Name: %s\n", name);
+        printf("Email: %s\n", email);
+        printf("Phone Number: %s\n", phone);
+        printf("Registration Date: %s\n", date);
+    }
+
+    int choice,index;
+    printf("\nSelect record index to act on (0 = skip): ");
+    scanf("%d",&index);
+    while(getchar()!='\n');
+    if (index <= 0 || index > count) {
+        printf("Skip action.\n");
+        return 0;
+    }
+
+    // สร้าง temp file สำหรับเขียนไฟล์ใหม่
+    FILE *temp = fopen("temp.csv","w");
+    if (!temp) { printf("Cannot create temp file!\n"); return 0; }
+    fprintf(temp,"%s",header);
+
+    for (int i=0;i<count;i++) {
+        if (i == index-1) { // record ที่เลือก
+            printf("\nWhat do you want to do?\n1.Update\n2.Delete\n3.Skip\nChoice: ");
             scanf("%d",&choice);
             while(getchar()!='\n');
 
-            if (choice == 1)//อัพเดต
-            {
-                update_info(temp);
-            }
-            else if (choice == 2)//ลบ
-            {
-                delete_info(line);
-            }
-            else 
-            {
-                fprintf(temp,"%s",line);
-            }
-        }
-        else {
-            fprintf(temp, "%s",line);
+            if (choice==1) { update_info(temp); } // อัพเดท
+            else if (choice==2) { delete_info(records[i]); /* ไม่เขียนลง temp */ }
+            else { fprintf(temp,"%s",records[i]); }
+        } else {
+            fprintf(temp,"%s",records[i]);
         }
     }
 
+    // นำ record อื่น ๆ จากไฟล์เก่ามาเขียน
+    fp = fopen("Seminar.csv","r");
+    fgets(line,sizeof(line),fp); // skip header
+    while(fgets(line,sizeof(line),fp)) {
+        int skip=0;
+        for (int i=0;i<count;i++) {
+            if (strcmp(line,records[i])==0) { skip=1; break; }
+        }
+        if (!skip) fprintf(temp,"%s",line);
+    }
     fclose(fp);
     fclose(temp);
 
     remove("Seminar.csv");
-    rename("temp.csv", "Seminar.csv");
+    rename("temp.csv","Seminar.csv");
 
-    if (!found)
-    {
-        printf("\n----> Data not found!, Please try seraching again\n");
-        printf("----> You can search by name, email, phone number, or registration date\n");
-    }
     return 1;
 }
 
@@ -278,34 +289,75 @@ int update_direct()
 {
     char keyword[50];
     char line[200];
-    int found = 0;
+    char records[100][200];
+    int count = 0;
 
-    FILE *fp = fopen("Seminar.csv", "r");
-    FILE *temp = fopen("temp.csv", "w");
-    if (!fp || !temp) {
-        printf("Cannot open file!\n");
-        return 0;
-    }
+    FILE *fp = fopen("Seminar.csv","r");
+    if (!fp) { printf("Cannot open file!\n"); return 0; }
+
 
     printf("Enter keyword to update (Name/Email/Phone/Date): ");
     scanf(" %[^\n]", keyword);
 
-    while (fgets(line, sizeof(line), fp)) {
-        if (strstr(line, keyword)) {
-            found = 1;
-            printf("\nFound record: %s", line);
-            update_info(temp);  // ใช้ฟังก์ชัน update ที่แยกไว้แล้ว
-        } else {
-            fprintf(temp, "%s", line);
+    fgets(line,sizeof(line),fp); // header
+    char header[200]; strcpy(header,line);
+
+    while(fgets(line,sizeof(line),fp)) {
+        if (strstr(line,keyword)) {
+            strcpy(records[count++],line);
         }
     }
+    fclose(fp);
 
+    if (count==0) { printf("No record found!\n"); return 0; }
+
+    printf("\n--- Found %d record(s) ---\n", count);
+    for (int i=0;i<count;i++) {
+        char tmp[200]; strcpy(tmp,records[i]);
+        char name[50]="",email[50]="",phone[20]="",date[20]="";
+        char *token=strtok(tmp,","); if(token) strcpy(name,token);
+        token=strtok(NULL,","); if(token) strcpy(email,token);
+        token=strtok(NULL,","); if(token) strcpy(phone,token);
+        token=strtok(NULL,","); if(token) strcpy(date,token);
+
+        printf("\n[%d] Participant Information\n", i+1);
+        printf("Name: %s\n", name);
+        printf("Email: %s\n", email);
+        printf("Phone Number: %s\n", phone);
+        printf("Registration Date: %s\n", date);
+    }
+
+    int index;
+    printf("\nSelect record index to update (0 = skip): ");
+    scanf("%d",&index);
+    while(getchar()!='\n');
+    if (index<=0 || index>count) { printf("Skip update.\n"); return 0; }
+
+    FILE *temp = fopen("temp.csv","w");
+    if (!temp) { printf("Cannot create temp file!\n"); return 0; }
+    fprintf(temp,"%s",header);
+
+    for (int i=0;i<count;i++) {
+        if (i==index-1) update_info(temp);
+        else fprintf(temp,"%s",records[i]);
+    }
+
+    // นำ record อื่น ๆ จากไฟล์เก่ามาเขียน
+    fp = fopen("Seminar.csv","r");
+    fgets(line,sizeof(line),fp); // skip header
+    while(fgets(line,sizeof(line),fp)) {
+        int skip=0;
+        for (int i=0;i<count;i++) {
+            if (strcmp(line,records[i])==0) { skip=1; break; }
+        }
+        if (!skip) fprintf(temp,"%s",line);
+    }
     fclose(fp);
     fclose(temp);
-    remove("Seminar.csv");
-    rename("temp.csv", "Seminar.csv");
 
-    if (!found) printf("No record found to update!\n");
+    remove("Seminar.csv");
+    rename("temp.csv","Seminar.csv");
+
     return 1;
 }
 
@@ -314,34 +366,74 @@ int delete_direct()
 {
     char keyword[50];
     char line[200];
-    int found = 0;
+    char records[100][200];
+    int count = 0;
 
-    FILE *fp = fopen("Seminar.csv", "r");
-    FILE *temp = fopen("temp.csv", "w");
-    if (!fp || !temp) {
-        printf("Cannot open file!\n");
-        return 0;
-    }
+    FILE *fp = fopen("Seminar.csv","r");
+    if (!fp) { printf("Cannot open file!\n"); return 0; }
 
     printf("Enter keyword to delete (Name/Email/Phone/Date): ");
     scanf(" %[^\n]", keyword);
 
-    while (fgets(line, sizeof(line), fp)) {
-        if (strstr(line, keyword)) {
-            found = 1;
-            delete_info(line); // ใช้ฟังก์ชัน delete
-            // ไม่เขียน record นี้ลงไฟล์ใหม่
-        } else {
-            fprintf(temp, "%s", line);
+    fgets(line,sizeof(line),fp); // header
+    char header[200]; strcpy(header,line);
+
+    while(fgets(line,sizeof(line),fp)) {
+        if (strstr(line,keyword)) {
+            strcpy(records[count++],line);
         }
     }
+    fclose(fp);
 
+    if (count==0) { printf("No record found!\n"); return 0; }
+
+    printf("\n--- Found %d record(s) ---\n", count);
+    for (int i=0;i<count;i++) {
+        char tmp[200]; strcpy(tmp,records[i]);
+        char name[50]="",email[50]="",phone[20]="",date[20]="";
+        char *token=strtok(tmp,","); if(token) strcpy(name,token);
+        token=strtok(NULL,","); if(token) strcpy(email,token);
+        token=strtok(NULL,","); if(token) strcpy(phone,token);
+        token=strtok(NULL,","); if(token) strcpy(date,token);
+
+        printf("\n[%d] Participant Information\n", i+1);
+        printf("Name: %s\n", name);
+        printf("Email: %s\n", email);
+        printf("Phone Number: %s\n", phone);
+        printf("Registration Date: %s\n", date);
+    }
+
+    int index;
+    printf("\nSelect record index to delete (0 = skip): ");
+    scanf("%d",&index);
+    while(getchar()!='\n');
+    if (index<=0 || index>count) { printf("Skip delete.\n"); return 0; }
+
+    FILE *temp = fopen("temp.csv","w");
+    if (!temp) { printf("Cannot create temp file!\n"); return 0; }
+    fprintf(temp,"%s",header);
+
+    for (int i=0;i<count;i++) {
+        if (i==index-1) delete_info(records[i]); // ไม่เขียนลง temp
+        else fprintf(temp,"%s",records[i]);
+    }
+
+    // นำ record อื่น ๆ จากไฟล์เก่ามาเขียน
+    fp = fopen("Seminar.csv","r");
+    fgets(line,sizeof(line),fp); // skip header
+    while(fgets(line,sizeof(line),fp)) {
+        int skip=0;
+        for (int i=0;i<count;i++) {
+            if (strcmp(line,records[i])==0) { skip=1; break; }
+        }
+        if (!skip) fprintf(temp,"%s",line);
+    }
     fclose(fp);
     fclose(temp);
-    remove("Seminar.csv");
-    rename("temp.csv", "Seminar.csv");
 
-    if (!found) printf("No record found to delete!\n");
+    remove("Seminar.csv");
+    rename("temp.csv","Seminar.csv");
+
     return 1;
 }
 
