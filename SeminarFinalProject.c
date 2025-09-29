@@ -60,11 +60,18 @@ int saveCSV(char *name, char *email, char *phone, char *regDate)
 }
 
 //ตรวจสอบอีเมล
+int isValidEmail(const char *email) {
+    const char *at = strchr(email, '@');
+    if (!at) return 0;                // ต้องมี '@'
+    if (at == email) return 0;        // ห้ามขึ้นต้นด้วย '@'
+    if (*(at+1) == '\0') return 0;    // ห้ามจบด้วย '@'
+    if (strchr(at, '.') == NULL) return 0; // ต้องมี '.' หลัง '@'
+    return 1;
+}
+
 int validateEmail (char *email)
 {
-    int len = strlen(email);
-    if ( len < 5 ) return 0 ;
-    return strcmp ( email + len - 4, ".com") == 0 ;
+    return isValidEmail(email);
 }
 
 //ตรวจสอบเบอร์
@@ -111,7 +118,7 @@ int add_info()
     {
         printf("Please enter your email: ");
         scanf(" %[^\n]", email);
-        if (!validateEmail(email)) printf("Email must end with .com!\n");
+        if (!validateEmail(email)) printf("Invalid email! Must contain @ and . after @\n");
     }
     while (!validateEmail(email));
 
@@ -158,7 +165,7 @@ int update_info(FILE *temp)
     do {
         printf("Enter new email: ");
         scanf(" %[^\n]", newEmail);
-        if (!validateEmail(newEmail)) printf("Email must end with .com!\n");
+        if (!validateEmail(newEmail)) printf("Invalid email! Must contain @ and . after @\n");
     } while (!validateEmail(newEmail));
 
     do {
@@ -485,6 +492,188 @@ int display_all()
     return 1;
 }
 
+// ฟังก์ชันช่วย reset ไฟล์ก่อนแต่ละ test
+void reset_file() {
+    FILE *fp = fopen("Seminar.csv","w");
+    if(fp) {
+        fprintf(fp,"ParticipantName,Email,PhoneNumber,RegistrationDate\n");
+        fclose(fp);
+    }
+}
+
+// ฟังก์ชันทดสอบ add_info แบบไม่ใช้ scanf (mock input)
+int add_info_test(const char *name, const char *email, const char *phone, const char *date) {
+    return saveCSV((char*)name,(char*)email,(char*)phone,(char*)date);
+}
+
+// ฟังก์ชันทดสอบ update_info แบบไม่ใช้ scanf (mock input)
+int update_info_test(const char *old_email, const char *new_name, const char *new_email, const char *new_phone, const char *new_date) {
+    FILE *fp = fopen("Seminar.csv","r");
+    if(!fp) return 0;
+
+    FILE *temp = fopen("temp.csv","w");
+    if(!temp) { fclose(fp); return 0; }
+
+    char line[200];
+    fgets(line,sizeof(line),fp); // header
+    fprintf(temp,"%s",line);
+
+    int updated = 0;
+    while(fgets(line,sizeof(line),fp)) {
+        if(strstr(line,old_email) && !updated) {
+            fprintf(temp,"%s,%s,%s,%s\n", new_name,new_email,new_phone,new_date);
+            updated = 1;
+        } else {
+            fprintf(temp,"%s",line);
+        }
+    }
+
+    fclose(fp);
+    fclose(temp);
+
+    remove("Seminar.csv");
+    rename("temp.csv","Seminar.csv");
+
+    return updated;
+}
+
+// unit test
+void unit_test(){
+    printf("\n=== START UNIT TEST ===\n");
+
+    // Reset CSV
+    reset_file();
+
+    // ----- Test 1: add_info ปกติ -----
+    int r = add_info_test("Alice","alice@example.com","0912345678","2025-09-30");
+    assert(r == 1);
+    printf("Test 1 passed: add normal record\n");
+
+    // ----- Test 2: add_info อีเมลผิด -----
+    r = add_info_test("Bob","bobexample.com","0812345678","2025-09-30");
+    assert(r == 1); // saveCSV ไม่ตรวจอีเมลใน test
+    printf("Test 2 passed: add invalid email record saved (simulation)\n");
+
+    // ----- Test 3: update_info ปกติ -----
+    r = update_info_test("alice@example.com","Alice Updated","alice.updated@example.com","0911111111","2025-10-01");
+    assert(r == 1);
+    printf("Test 3 passed: update normal record\n");
+
+    // ----- Test 4: update_info record ไม่พบ -----
+    r = update_info_test("nonexist@example.com","X","x@example.com","0912340000","2025-10-02");
+    assert(r == 0);
+    printf("Test 4 passed: update non-existing record\n");
+
+    printf("=== UNIT TEST COMPLETED ===\n");
+}
+
+// ฟังก์ชันทดสอบ add_info โดยตรงด้วยข้อมูล
+int add_info_test(const char *name, const char *email, const char *phone, const char *date) {
+    if (!validateEmail((char*)email) || !validatePhone((char*)phone)) return 0;
+
+    FILE *fp = fopen("Seminar.csv","a");
+    if (!fp) return 0;
+    fprintf(fp,"%s,%s,%s,%s\n", name, email, phone, date);
+    fclose(fp);
+    return 1;
+}
+
+// ฟังก์ชันทดสอบ update_info โดยตรงด้วย keyword
+int update_info_test(const char *keyword, const char *newName, const char *newEmail, const char *newPhone, const char *newDate) {
+    FILE *fp = fopen("Seminar.csv","r");
+    if (!fp) return 0;
+
+    FILE *temp = fopen("temp.csv","w");
+    if (!temp) { fclose(fp); return 0; }
+
+    char line[200], header[200];
+    fgets(header, sizeof(header), fp);
+    fprintf(temp,"%s",header);
+
+    int found = 0;
+    while(fgets(line,sizeof(line),fp)) {
+        if (strstr(line,keyword)) {
+            if (!validateEmail((char*)newEmail) || !validatePhone((char*)newPhone)) {
+                fclose(fp); fclose(temp); remove("temp.csv"); return 0;
+            }
+            fprintf(temp,"%s,%s,%s,%s\n", newName, newEmail, newPhone, newDate);
+            found = 1;
+        } else {
+            fprintf(temp,"%s",line);
+        }
+    }
+    fclose(fp);
+    fclose(temp);
+
+    remove("Seminar.csv");
+    rename("temp.csv","Seminar.csv");
+
+    return found;
+}
+
+// ฟังก์ชันทดสอบ search_info แบบเรียก keyword
+int search_info_test(const char *keyword) {
+    FILE *fp = fopen("Seminar.csv","r");
+    if (!fp) return 0;
+
+    char line[200];
+    fgets(line,sizeof(line),fp); // skip header
+    int count = 0;
+    while(fgets(line,sizeof(line),fp)) {
+        if (strstr(line,keyword)) count++;
+    }
+    fclose(fp);
+    return count;
+}
+
+//e2e
+void e2e_test(){
+    printf("\n=== START E2E TEST ===\n");
+
+    reset_file();
+
+    // 1. Add participants
+    assert(add_info_test("Alice","alice@example.com","0912345678","2025-09-30") == 1);
+    assert(add_info_test("Bob","bob@example.com","0812345678","2025-09-29") == 1);
+
+    // 2. Search participants
+    assert(search_info_test("Alice") == 1);
+    assert(search_info_test("Bob") == 1);
+    assert(search_info_test("Charlie") == 0);
+
+    // 3. Update participant
+    assert(update_info_test("Alice","Alice Updated","alice.updated@example.com","0911111111","2025-10-01") == 1);
+    assert(search_info_test("Alice Updated") == 1);
+    assert(search_info_test("Alice") == 0);
+
+    // 4. Display all (ตรวจสอบจำนวน record)
+    FILE *fp = fopen("Seminar.csv","r");
+    int record_count = 0;
+    char line[200];
+    fgets(line,sizeof(line),fp); // skip header
+    while(fgets(line,sizeof(line),fp)) record_count++;
+    fclose(fp);
+    assert(record_count == 2);
+
+    // 5. Delete participant (จำลองลบ)
+    fp = fopen("Seminar.csv","r");
+    FILE *temp = fopen("temp.csv","w");
+    fgets(line,sizeof(line),fp);
+    fprintf(temp,"%s",line); // header
+    while(fgets(line,sizeof(line),fp)) {
+        if (!strstr(line,"Bob")) fprintf(temp,"%s",line);
+    }
+    fclose(fp); fclose(temp);
+    remove("Seminar.csv");
+    rename("temp.csv","Seminar.csv");
+
+    assert(search_info_test("Bob") == 0);
+
+    printf("=== E2E TEST PASSED ===\n");
+
+}
+
+
 //แสดงเมนู 
 int display_menu()
 {
@@ -497,7 +686,9 @@ int display_menu()
         printf("| 3. Search for participants information\n");
         printf("| 4. Update participant \n");
         printf("| 5. Delete participant \n");
-        printf("| 6. Exit\n");
+        printf("| 6. UNIT TEST \n");
+        printf("| 7. E2E TEST \n");
+        printf("| 8. Exit\n");
         printf("---> Please select an option: ");
         scanf("%d", &choice);
         while(getchar()!='\n');
@@ -508,10 +699,12 @@ int display_menu()
             case 3: search_info(); break;
             case 4: update_direct(); break;
             case 5: delete_direct(); break;
-            case 6: printf("\nExit program!\n"); break; 
+            case 6: unit_test(); break;
+            case 7: e2e_test(); break;
+            case 8: printf("\nExit program!\n"); break; 
             default: printf("\nInvalid choice!\n");
         }
-    } while (choice != 6);
+    } while (choice != 8);
 }
 
 int main()
