@@ -236,6 +236,16 @@ int generateID(char *out_id, size_t out_sz) {
     return 1;
 }
 
+// Compare function for qsort (sort by ID)
+int compareByID(const void *a, const void *b) {
+    const char (*recA)[MAXLINE] = a;
+    const char (*recB)[MAXLINE] = b;
+    char idA[64], nameA[256], emailA[256], phoneA[64], dateA[64], statusA[64];
+    char idB[64], nameB[256], emailB[256], phoneB[64], dateB[64], statusB[64];
+    parse_line(*recA, idA, nameA, emailA, phoneA, dateA, statusA);
+    parse_line(*recB, idB, nameB, emailB, phoneB, dateB, statusB);
+    return strcmp(idA, idB);
+}
 
 // ฟังก์ชันตรวจสิทธิ์ admin แบบง่าย
 int admin_login() {
@@ -446,61 +456,49 @@ int search_controller(int isAdmin) {
 
     if (count == 0) { printf("No record found for '%s'\n", keyword); return 0; }
 
-    printf("\n--- Found %d record(s) ---\n", count);
-    for (int i=0;i<count;i++) {
-        char id[64], name[256], email[256], phone[64], date[64], status[64];
-        parse_line(records[i], id, name, email, phone, date, status);
+    // Sort by ID
+    qsort(records, count, sizeof(records[0]), compareByID);
 
-        printf("\n[%d] Participant Information\n", i+1);
-        printf("ID: %s\n", id);
-        printf("Name: %s\n", name);
-        printf("Email: %s\n", email);
-        printf("Phone Number: %s\n", phone);
-        printf("Registration Date: %s\n", date);
-        printf("Status: %s\n", status);
+    if (isAdmin) {
+        printf("\n--- Found %d record(s) ---\n", count);
+        for (int i = 0; i < count; i++) {
+            char id[64], name[256], email[256], phone[64], date[64], status[64];
+            parse_line(records[i], id, name, email, phone, date, status);
+            printf("\n[%d] Participant Information\n", i+1);
+            printf("ID: %s\nName: %s\nEmail: %s\nPhone: %s\nRegistration Date: %s\nStatus: %s\n",
+                   id, name, email, phone, date, status);
+        }
+    } else {
+        printf("\n===================================================================\n");
+        printf("| %-6s | %-28s | %-12s | %-8s |\n", "ID", "Name", "Reg. Date", "Status");
+        printf("===================================================================\n");
+        for (int i = 0; i < count; i++) {
+            char id[64], name[256], email[256], phone[64], date[64], status[64];
+            parse_line(records[i], id, name, email, phone, date, status);
+            printf("| %-6s | %-28s | %-12s | %-8s |\n", id, name, date, status);
+        }
+        printf("===================================================================\n");
     }
 
-    // ให้ผู้ใช้เลือก index สำหรับจัดการ record
-    int idx;
-    printf("\nSelect index to manage (0 = skip): \n");
-    if (scanf("%d", &idx) != 1) { while(getchar()!='\n'); return 0; }
-    while(getchar()!='\n');
-    if (idx <= 0 || idx > count) { printf("Skipped.\n"); return 0; }
+    // สำหรับ admin ให้เลือกจัดการ record
+    if (isAdmin) {
+        int idx;
+        printf("\nSelect index to manage (0 = skip): ");
+        if (scanf("%d", &idx) != 1) { while(getchar()!='\n'); return 0; }
+        while(getchar()!='\n');
+        if (idx <= 0 || idx > count) { printf("Skipped.\n"); return 0; }
 
-    char id[64], name[256], email[256], phone[64], date[64], status[64];
-    parse_line(records[idx-1], id, name, email, phone, date, status);
+        char id[64], name[256], email[256], phone[64], date[64], status[64];
+        parse_line(records[idx-1], id, name, email, phone, date, status);
 
-    char action;
-    printf("Choose action: (e)dit / (d)elete / (s)kip: ");
-    if (scanf(" %c", &action) != 1) { while(getchar()!='\n'); return 0; }
-    while(getchar()!='\n');
+        char action;
+        printf("Choose action: (e)dit / (d)elete / (s)kip: ");
+        if (scanf(" %c", &action) != 1) { while(getchar()!='\n'); return 0; }
+        while(getchar()!='\n');
 
-    if (action=='e' || action=='E') {
-        if (isAdmin) {
-            // admin can edit directly
-            FILE *temp = fopen("temp.csv", "w");
-            if (!temp) { printf("Cannot create temp file.\n"); return 0; }
-            fprintf(temp, "ID,ParticipantName,Email,PhoneNumber,RegistrationDate,Status\n");
-            // update only selected record
-            update_info_interactive(temp, id, status);
-            // copy rest unchanged
-            FILE *orig = fopen(CSV_FILE, "r");
-            fgets(line, sizeof(line), orig); // skip header
-            while (fgets(line, sizeof(line), orig)) {
-                if (strcmp(line, records[idx-1]) != 0)
-                    fprintf(temp, "%s", line);
-            }
-            fclose(orig); fclose(temp);
-            remove(CSV_FILE); rename("temp.csv", CSV_FILE);
-            printf("Record updated.\n");
-        } else {
-            participant_edit_self(); // participant only edit self
-        }
-    } else if (action=='d' || action=='D') {
-        if (isAdmin) delete_direct_admin();
-        else participant_delete_self();
-    } else {
-        printf("Skipped.\n");
+        if (action=='e' || action=='E') update_direct_admin();
+        else if (action=='d' || action=='D') delete_direct_admin();
+        else printf("Skipped.\n");
     }
 
     return 1;
@@ -773,9 +771,9 @@ void display_limited() {
     if (!fp) { printf("Cannot open %s\n", CSV_FILE); return; }
     char line[MAXLINE];
     fgets(line, sizeof(line), fp); // skip header
-    printf("\n===============================================================\n");
+    printf("\n===================================================================\n");
     printf("| %-6s | %-28s | %-12s | %-8s |\n", "ID", "Name", "Reg. Date", "Status");
-    printf("===============================================================\n");
+    printf("===================================================================\n");
     int count = 0;
     while (fgets(line, sizeof(line), fp)) {
         char id[64], name[256], email[256], phone[64], date[64], status[64];
@@ -783,7 +781,7 @@ void display_limited() {
         printf("| %-6s | %-28s | %-12s | %-8s |\n", id, name, date, status);
         count++;
     }
-    printf("===============================================================\n");
+    printf("===================================================================\n");
     if (count == 0) printf("No participants found.\n");
     fclose(fp);
 }
@@ -824,16 +822,16 @@ int admin_menu() {
 int participant_menu() {
     int choice = 0;
     do {
-        printf("\n==============================================================\n");
+        printf("\n===========================================================\n");
     printf("                     PARTICIPANT MENU                         \n");
-    printf("==============================================================\n");
+    printf("===========================================================\n");
     printf("| %-2s | %-50s |\n", "1", "Register (Add participant)");
     printf("| %-2s | %-50s |\n", "2", "Show participants (ID, Name, RegDate, Status)");
     printf("| %-2s | %-50s |\n", "3", "Search participant (limited view)");
     printf("| %-2s | %-50s |\n", "4", "Edit your info (verify email+phone)");
     printf("| %-2s | %-50s |\n", "5", "Delete your info (verify email+phone)");
     printf("| %-2s | %-50s |\n", "6", "Exit to main");
-    printf("==============================================================\n");
+    printf("===========================================================\n");
     printf("Choose option: ");
 
         if (scanf("%d", &choice) != 1) { while(getchar()!='\n'); choice = -1; }
