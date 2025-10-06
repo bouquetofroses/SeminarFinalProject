@@ -37,6 +37,7 @@ int add_participant_interactive();
 int participant_edit_self();
 int participant_delete_self();
 
+
 //สร้างไฟล์
 int createfile()
 {
@@ -251,6 +252,10 @@ int compareByID(const void *a, const void *b) {
 int admin_login() {
     char user[64], pass[64];
     printf("\nAdmin login required.\n");
+    printf ("========================\n");
+    printf("|   USERNAME = admin   |\n");
+    printf("|   PASSWORD = 1234    |\n");
+    printf ("========================\n");
     printf("Username: ");
     if (scanf("%49s", user) != 1) { while(getchar()!='\n'); return 0; }
     printf("Password: ");
@@ -460,13 +465,13 @@ int search_controller(int isAdmin) {
     qsort(records, count, sizeof(records[0]), compareByID);
 
     if (isAdmin) {
-        printf("\n--- Found %d record(s) ---\n", count);
-        for (int i = 0; i < count; i++) {
-            char id[64], name[256], email[256], phone[64], date[64], status[64];
-            parse_line(records[i], id, name, email, phone, date, status);
-            printf("\n[%d] Participant Information\n", i+1);
-            printf("ID: %s\nName: %s\nEmail: %s\nPhone: %s\nRegistration Date: %s\nStatus: %s\n",
-                   id, name, email, phone, date, status);
+    printf("\n--- Found %d record(s) ---\n", count);
+    for (int i = 0; i < count; i++) {
+        char id[64], name[256], email[256], phone[64], date[64], status[64];
+        parse_line(records[i], id, name, email, phone, date, status);
+        printf("\n[%d] Participant Information\n", i+1);
+        printf("ID: %s\nName: %s\nEmail: %s\nPhone: %s\nRegistration Date: %s\nStatus: %s\n",
+               id, name, email, phone, date, status);
         }
     } else {
         printf("\n===================================================================\n");
@@ -749,21 +754,35 @@ void display_all_admin() {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) { printf("Cannot open %s\n", CSV_FILE); return; }
     char line[MAXLINE];
-    // header
-    fgets(line, sizeof(line), fp);
-    printf("\n===============================================================================================\n");
-    printf("| %-6s | %-18s | %-25s | %-12s | %-12s | %-8s |\n", "ID", "Name", "Email", "Phone", "Reg. Date", "Status");
-    printf("===============================================================================================\n");
+    fgets(line, sizeof(line), fp); // skip header
+    char records[500][MAXLINE];
     int count = 0;
+
     while (fgets(line, sizeof(line), fp)) {
+        if (strlen(line) > 1)
+            strcpy(records[count++], line);
+    }
+    fclose(fp);
+
+    if (count == 0) {
+        printf("No participants found.\n");
+        return;
+    }
+
+    // เรียงตาม ID
+    qsort(records, count, sizeof(records[0]), compareByID);
+
+    printf("\n===============================================================================================\n");
+    printf("| %-6s | %-18s | %-25s | %-12s | %-12s | %-8s |\n", 
+           "ID", "Name", "Email", "Phone", "Reg. Date", "Status");
+    printf("===============================================================================================\n");
+    for (int i = 0; i < count; i++) {
         char id[64], name[256], email[256], phone[64], date[64], status[64];
-        if (!parse_line(line, id, name, email, phone, date, status)) continue;
-        printf("| %-6s | %-18s | %-25s | %-12s | %-12s | %-8s |\n", id, name, email, phone, date, status);
-        count++;
+        if (!parse_line(records[i], id, name, email, phone, date, status)) continue;
+        printf("| %-6s | %-18s | %-25s | %-12s | %-12s | %-8s |\n", 
+               id, name, email, phone, date, status);
     }
     printf("===============================================================================================\n");
-    if (count == 0) printf("No participants found.\n");
-    fclose(fp);
 }
 // Participant: limited display (ID, Name, RegDate) -- show only Active
 void display_limited() {
@@ -771,19 +790,32 @@ void display_limited() {
     if (!fp) { printf("Cannot open %s\n", CSV_FILE); return; }
     char line[MAXLINE];
     fgets(line, sizeof(line), fp); // skip header
+    char records[500][MAXLINE];
+    int count = 0;
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strlen(line) > 1)
+            strcpy(records[count++], line);
+    }
+    fclose(fp);
+
+    if (count == 0) {
+        printf("No participants found.\n");
+        return;
+    }
+
+    // เรียงตาม ID
+    qsort(records, count, sizeof(records[0]), compareByID);
+
     printf("\n===================================================================\n");
     printf("| %-6s | %-28s | %-12s | %-8s |\n", "ID", "Name", "Reg. Date", "Status");
     printf("===================================================================\n");
-    int count = 0;
-    while (fgets(line, sizeof(line), fp)) {
+    for (int i = 0; i < count; i++) {
         char id[64], name[256], email[256], phone[64], date[64], status[64];
-        if (!parse_line(line, id, name, email, phone, date, status)) continue;
+        if (!parse_line(records[i], id, name, email, phone, date, status)) continue;
         printf("| %-6s | %-28s | %-12s | %-8s |\n", id, name, date, status);
-        count++;
     }
     printf("===================================================================\n");
-    if (count == 0) printf("No participants found.\n");
-    fclose(fp);
 }
 
 //แสดงเมนู 
@@ -792,16 +824,16 @@ void display_limited() {
 int admin_menu() {
     int choice = 0;
     do {
-        printf("\n==============================================================\n");
+        printf("\n===========================================================\n");
     printf("                        ADMIN MENU                            \n");
-    printf("==============================================================\n");
+    printf("===========================================================\n");
     printf("| %-2s | %-50s |\n", "1", "Add participant");
     printf("| %-2s | %-50s |\n", "2", "Search participant (full info)");
     printf("| %-2s | %-50s |\n", "3", "Update participant (admin)");
     printf("| %-2s | %-50s |\n", "4", "Delete participant (admin - set Inactive)");
     printf("| %-2s | %-50s |\n", "5", "Display all participants (full)");
     printf("| %-2s | %-50s |\n", "6", "Logout to main");
-    printf("==============================================================\n");
+    printf("===========================================================\n");
     printf("Choose option: ");
 
         if (scanf("%d", &choice) != 1) { while(getchar()!='\n'); choice = -1; }
@@ -813,7 +845,9 @@ int admin_menu() {
             case 4: delete_direct_admin(); break;
             case 5: display_all_admin(); break;
             case 6: printf("Logging out admin...\n"); break;
-            default: if (choice!=-1) printf("Invalid choice.\n");
+            default:
+                printf("Invalid choice. Please select 1-6 only.\n");
+                break;
         }
     } while (choice != 6);
     return 0;
@@ -843,7 +877,9 @@ int participant_menu() {
             case 4: participant_edit_self(); break;
             case 5: participant_delete_self(); break;
             case 6: printf("Returning to main menu...\n"); break;
-            default: if (choice!=-1) printf("Invalid choice.\n");
+            default:
+                printf("Invalid choice. Please select 1-6 only.\n");
+                break;
         }
     } while (choice != 6);
     return 0;
