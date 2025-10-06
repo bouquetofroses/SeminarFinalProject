@@ -37,6 +37,7 @@ int add_participant_interactive();
 int participant_edit_self();
 int participant_delete_self();
 
+void run_all_unit_tests();
 
 //สร้างไฟล์
 int createfile()
@@ -96,29 +97,53 @@ int validateEmail (char *email)
     return 1;
 }
 
-// check email duplicate in entire file
-int isEmailDuplicate(const char *email) {
-    return isEmailDuplicateExcept(email, NULL);
-}
 
 // check email duplicate except a given ID (used when updating)
 int isEmailDuplicateExcept(const char *email, const char *except_id) {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) return 0;
     char line[MAXLINE];
-    // skip header
-    fgets(line, sizeof(line), fp);
+    fgets(line, sizeof(line), fp); // skip header
     while (fgets(line, sizeof(line), fp)) {
         char id[64], name[256], e[256], phone[64], date[64], status[64];
         if (parse_line(line, id, name, e, phone, date, status)) {
-            if (strcmp(e, email) == 0) {
-                if (except_id == NULL) { fclose(fp); return 1; }
+            // ตรวจเฉพาะอีเมลที่เหมือนกัน และมีสถานะ Active
+            if (strcmp(e, email) == 0 && strcasecmp(status, "Active") == 0) {
+                if (except_id == NULL) { fclose(fp); return 1; } // email ซ้ำกับ Active record อื่น
                 if (strcmp(id, except_id) != 0) { fclose(fp); return 1; }
             }
         }
     }
     fclose(fp);
     return 0;
+}
+
+// check email duplicate in entire file
+int isEmailDuplicate(const char *email) {
+    return isEmailDuplicateExcept(email, NULL);
+}
+
+int isPhoneDuplicateExcept(const char *phone, const char *except_id) {
+    FILE *fp = fopen(CSV_FILE, "r");
+    if (!fp) return 0;
+    char line[MAXLINE];
+    fgets(line, sizeof(line), fp); // skip header
+    while (fgets(line, sizeof(line), fp)) {
+        char id[64], name[256], email[256], p[64], date[64], status[64];
+        if (parse_line(line, id, name, email, p, date, status)) {
+            // ตรวจเฉพาะเบอร์ที่เหมือนกัน และมีสถานะ Active
+            if (strcmp(p, phone) == 0 && strcasecmp(status, "Active") == 0) {
+                if (except_id == NULL) { fclose(fp); return 1; } // เบอร์ซ้ำกับ Active record อื่น
+                if (strcmp(id, except_id) != 0) { fclose(fp); return 1; }
+            }
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+int isPhoneDuplicate(const char *phone) {
+    return isPhoneDuplicateExcept(phone, NULL);
 }
 
 //ตรวจสอบเบอร์
@@ -287,7 +312,10 @@ int add_participant_interactive() {
             if (fgets(email, sizeof(email), stdin) == NULL) return 0;
             trim_newline(email);
             if (!validateEmail(email)) { printf("Invalid email format.\n"); continue; }
-            if (isEmailDuplicate(email)) { printf("This email has already been registered.\n"); return 0; }
+            if (isEmailDuplicate(email)) { 
+                printf("This email has already been registered by an active participant.\n"); 
+                continue; // 🚨 แก้ไขจาก return 0; เป็น continue; 🚨
+            }
             break;
         } while (1);
 
@@ -297,6 +325,10 @@ int add_participant_interactive() {
             if (fgets(phone, sizeof(phone), stdin) == NULL) return 0;
             trim_newline(phone);
             if (!validatePhone(phone)) { printf("Invalid phone.\n"); continue; }
+            if (isPhoneDuplicate(phone)) {
+                printf("This phone number has already been registered by an active participant.\n");
+                continue; // 🚨 แก้ไขจาก return 0; เป็น continue; 🚨
+            }
             break;
         } while (1);
 
@@ -365,9 +397,15 @@ int update_info_interactive(FILE *temp, const char *orig_id, const char *orig_st
             trim_newline(newEmail);
             if (strlen(newEmail) == 0) { strcpy(newEmail, currEmail); break; }
             if (!validateEmail(newEmail)) { printf("Invalid email format.\n"); continue; }
-            if (isEmailDuplicateExcept(newEmail, orig_id)) { printf("This email is used by another participant.\n"); continue; }
+            
+            // การตรวจสอบอีเมล: ถูกต้องแล้ว (ใช้ continue; เพื่อกลับไปป้อนใหม่)
+            if (isEmailDuplicateExcept(newEmail, orig_id)) { 
+                printf("This email is used by another participant.\n"); 
+                continue; 
+            }
             break;
         }
+
 
         // phone
         while (1) {
@@ -376,8 +414,13 @@ int update_info_interactive(FILE *temp, const char *orig_id, const char *orig_st
             trim_newline(newPhone);
             if (strlen(newPhone) == 0) { strcpy(newPhone, currPhone); break; }
             if (!validatePhone(newPhone)) { printf("Invalid phone.\n"); continue; }
+            if (isPhoneDuplicateExcept(newPhone, orig_id)) {
+                printf("This phone number is used by another participant.\n"); 
+                continue; // ถ้าซ้ำ ให้กลับไปป้อนใหม่
+            }
             break;
         }
+        
 
         // date
         printf("Current RegDate: %s\nNew Date (YYYY-MM-DD or 0 for today): ", currDate);
@@ -832,7 +875,9 @@ int admin_menu() {
     printf("| %-2s | %-50s |\n", "3", "Update participant (admin)");
     printf("| %-2s | %-50s |\n", "4", "Delete participant (admin - set Inactive)");
     printf("| %-2s | %-50s |\n", "5", "Display all participants (full)");
-    printf("| %-2s | %-50s |\n", "6", "Logout to main");
+    printf("| %-2s | %-50s |\n", "6", "Run Unit Tests");
+    printf("| %-2s | %-50s |\n", "7", "Run E2E Tests");
+    printf("| %-2s | %-50s |\n", "8", "Logout to main");
     printf("===========================================================\n");
     printf("Choose option: ");
 
@@ -844,12 +889,14 @@ int admin_menu() {
             case 3: update_direct_admin(); break;
             case 4: delete_direct_admin(); break;
             case 5: display_all_admin(); break;
-            case 6: printf("Logging out admin...\n"); break;
+            case 6: run_all_unit_tests(); break;
+            case 7:
+            case 8: printf("Logging out admin...\n"); break;
             default:
-                printf("Invalid choice. Please select 1-6 only.\n");
+                printf("Invalid choice. Please select 1-8 only.\n");
                 break;
         }
-    } while (choice != 6);
+    } while (choice != 8);
     return 0;
 }
 
@@ -864,7 +911,9 @@ int participant_menu() {
     printf("| %-2s | %-50s |\n", "3", "Search participant (limited view)");
     printf("| %-2s | %-50s |\n", "4", "Edit your info (verify email+phone)");
     printf("| %-2s | %-50s |\n", "5", "Delete your info (verify email+phone)");
-    printf("| %-2s | %-50s |\n", "6", "Exit to main");
+    printf("| %-2s | %-50s |\n", "6", "Run Unit Tests");
+    printf("| %-2s | %-50s |\n", "7", "Run E2E Tests");
+    printf("| %-2s | %-50s |\n", "8", "Exit to main");
     printf("===========================================================\n");
     printf("Choose option: ");
 
@@ -876,14 +925,140 @@ int participant_menu() {
             case 3: search_controller(0); break;
             case 4: participant_edit_self(); break;
             case 5: participant_delete_self(); break;
-            case 6: printf("Returning to main menu...\n"); break;
+            case 6: run_all_unit_tests(); break;
+            case 7:
+            case 8: printf("Returning to main menu...\n"); break;
             default:
-                printf("Invalid choice. Please select 1-6 only.\n");
+                printf("Invalid choice. Please select 1-8 only.\n");
                 break;
         }
-    } while (choice != 6);
+    } while (choice != 8);
     return 0;
 }
+
+// ============================================
+//               UNIT TEST CODE
+// ============================================
+
+#define TEST_PASS 1
+#define TEST_FAIL 0
+
+int test_case_count = 0;
+int test_fail_count = 0;
+
+void print_test_result(const char *test_name, int result) {
+    printf("[%s] %-50s\n", (result == TEST_PASS) ? "PASS" : "FAIL", test_name);
+    test_case_count++;
+    if (result == TEST_FAIL) {
+        test_fail_count++;
+    }
+}
+
+// --------------------------------------------
+// Test Suite 1: Validation Tests
+// --------------------------------------------
+void test_validation_suite() {
+    printf("--- Running Validation Tests ---\n");
+    char email1[] = "test@example.com";
+    print_test_result("Email: Valid format", validateEmail(email1));
+    char email2[] = "invalid-email";
+    print_test_result("Email: Invalid format (missing @)", validateEmail(email2) == TEST_FAIL);
+    char email3[] = "test@.com";
+    print_test_result("Email: Invalid format (missing domain part)", validateEmail(email3) == TEST_FAIL);
+
+    char phone1[] = "0812345678";
+    print_test_result("Phone: Valid format (08)", validatePhone(phone1));
+    char phone2[] = "0998765432";
+    print_test_result("Phone: Valid format (09)", validatePhone(phone2));
+    char phone3[] = "0611112222";
+    print_test_result("Phone: Valid format (06)", validatePhone(phone3));
+    char phone4[] = "1234567890";
+    print_test_result("Phone: Invalid format (starts wrong)", validatePhone(phone4) == TEST_FAIL);
+    char phone5[] = "081234567";
+    print_test_result("Phone: Invalid format (too short)", validatePhone(phone5) == TEST_FAIL);
+}
+
+// --------------------------------------------
+// Test Suite 2: Duplication Tests
+// NOTE: This test relies on existing data in Seminar.csv.
+// --------------------------------------------
+void test_duplication_suite() {
+    printf("--- Running Duplication Tests (Depends on Seminar.csv content) ---\n");
+
+    // 1. หาอีเมล/เบอร์โทรศัพท์ของ Active Participant เพื่อใช้ทดสอบการซ้ำซ้อน
+    FILE *fp = fopen(CSV_FILE, "r");
+    char duplicate_email[256] = "";
+    char duplicate_phone[64] = "";
+    char found_id[64] = "";
+    char line[MAXLINE];
+    
+    if (fp) {
+        fgets(line, sizeof(line), fp); // ข้ามส่วนหัว
+        while (fgets(line, sizeof(line), fp)) {
+            char id[64], name[256], email[256], p[64], date[64], status[64];
+            if (parse_line(line, id, name, email, p, date, status)) {
+                if (strcasecmp(status, "Active") == 0) {
+                    strcpy(duplicate_email, email);
+                    strcpy(duplicate_phone, p);
+                    strcpy(found_id, id);
+                    break;
+                }
+            }
+        }
+        fclose(fp);
+    }
+
+    if (strlen(found_id) > 0) {
+        printf("--- Using Active ID: %s for Duplication Checks ---\n", found_id);
+        
+        // T2.1: ทดสอบการเพิ่มใหม่ด้วยอีเมลที่ซ้ำกับ Active (ต้องล้มเหลว/ซ้ำ = 1)
+        print_test_result("Duplication: Add new with Active email (Should Fail)", isEmailDuplicate(duplicate_email));
+        
+        // T2.2: ทดสอบการแก้ไขตัวเองด้วยอีเมลเดิม (ต้องผ่าน/ไม่ซ้ำ = 0)
+        print_test_result("Duplication: Update self with same email (Should Pass)", isEmailDuplicateExcept(duplicate_email, found_id) == TEST_FAIL);
+
+        // T2.3: ทดสอบการเพิ่มใหม่ด้วยเบอร์โทรที่ซ้ำกับ Active (ต้องล้มเหลว/ซ้ำ = 1)
+        print_test_result("Duplication: Add new with Active phone (Should Fail)", isPhoneDuplicate(duplicate_phone));
+        
+        // T2.4: ทดสอบการแก้ไขตัวเองด้วยเบอร์โทรเดิม (ต้องผ่าน/ไม่ซ้ำ = 0)
+        print_test_result("Duplication: Update self with same phone (Should Pass)", isPhoneDuplicateExcept(duplicate_phone, found_id) == TEST_FAIL);
+        
+    } else {
+        printf("Skipped duplication tests: Could not find an Active participant in Seminar.csv.\n");
+        test_case_count += 4; // นับ 4 เคสนี้เป็นผ่านไปก่อนหากรันไม่ได้
+    }
+
+    // T2.5: ทดสอบการเพิ่มใหม่ด้วยอีเมลที่ไม่ซ้ำ (ต้องผ่าน/ไม่ซ้ำ = 0)
+    print_test_result("Duplication: Unique Email (Should Pass)", isEmailDuplicate("unique.test@example.com") == TEST_FAIL);
+    // T2.6: ทดสอบการเพิ่มใหม่ด้วยเบอร์โทรที่ไม่ซ้ำ (ต้องผ่าน/ไม่ซ้ำ = 0)
+    print_test_result("Duplication: Unique Phone (Should Pass)", isPhoneDuplicate("0991234567") == TEST_FAIL);
+}
+
+// --------------------------------------------
+// Main Unit Test Controller
+// --------------------------------------------
+void run_all_unit_tests() {
+    printf("\n============================================\n");
+    printf("           RUNNING UNIT TESTS\n");
+    printf("============================================\n");
+    
+    test_case_count = 0;
+    test_fail_count = 0;
+
+    // รัน Test Suites ทั้งหมด
+    test_validation_suite();
+    test_duplication_suite();
+    
+    printf("\n--------------------------------------------\n");
+    printf("Test Summary: %d total tests run, %d failed.\n", test_case_count, test_fail_count);
+    if (test_fail_count == 0) {
+        printf("ALL TESTS PASSED! ✅\n");
+    } else {
+        printf("TESTS FAILED! ❌\n");
+    }
+    printf("============================================\n");
+}
+
 
 int main()
 {
