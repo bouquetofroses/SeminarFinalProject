@@ -37,7 +37,9 @@ int add_participant_interactive();
 int participant_edit_self();
 int participant_delete_self();
 
-void run_all_unit_tests();
+void print_test_result(const char *desc, int passed);
+void run_full_unit_test_suite();
+
 
 //สร้างไฟล์
 int createfile()
@@ -88,13 +90,22 @@ int saveCSV(const char *id, const char *name, const char *email, const char *pho
 //ตรวจสอบอีเมล
 int validateEmail (char *email)
 {
-    if (!email) return 0;
-    char *at = strchr(email, '@');
-    if (!at) return 0;                // ต้องมี '@'
-    if (at == email) return 0;        // ห้ามขึ้นต้นด้วย '@'
-    if (*(at+1) == '\0') return 0;    // ห้ามจบด้วย '@'
-    if (strchr(at, '.') == NULL) return 0; // ต้องมี '.' หลัง '@'
-    return 1;
+    int len = strlen(email);
+    int atCount = 0;
+    const char *atPos = NULL;
+
+    for (int i = 0; i < len; i++) {
+        if (isspace(email[i])) return 0;  // ห้าม space
+        if (email[i] == '@') {
+            atCount++;
+            atPos = &email[i];
+        }
+    }
+
+    if (atCount != 1) return 0;                   // ต้องมี @ เพียงตัวเดียว
+    if (email[0] == '@' || email[len-1] == '@') return 0; // ห้ามขึ้นต้น/ท้าย @
+    if (strchr(atPos, '.') == NULL) return 0;    // ต้องมี . หลัง @
+    return 1 ;
 }
 
 
@@ -108,7 +119,7 @@ int isEmailDuplicateExcept(const char *email, const char *except_id) {
         char id[64], name[256], e[256], phone[64], date[64], status[64];
         if (parse_line(line, id, name, e, phone, date, status)) {
             // ตรวจเฉพาะอีเมลที่เหมือนกัน และมีสถานะ Active
-            if (strcmp(e, email) == 0 && strcasecmp(status, "Active") == 0) {
+            if (strcasecmp(e, email) == 0 && strcasecmp(status, "Active") == 0) {
                 if (except_id == NULL) { fclose(fp); return 1; } // email ซ้ำกับ Active record อื่น
                 if (strcmp(id, except_id) != 0) { fclose(fp); return 1; }
             }
@@ -309,12 +320,16 @@ int add_participant_interactive() {
         // email
         do {
             printf("Enter email: ");
+            for (int i = 0; email[i]; i++)
+            email[i] = tolower((unsigned char)email[i]);
             if (fgets(email, sizeof(email), stdin) == NULL) return 0;
             trim_newline(email);
+
             if (!validateEmail(email)) { printf("Invalid email format.\n"); continue; }
+
             if (isEmailDuplicate(email)) { 
                 printf("This email has already been registered by an active participant.\n"); 
-                continue; // 🚨 แก้ไขจาก return 0; เป็น continue; 🚨
+                continue; 
             }
             break;
         } while (1);
@@ -327,7 +342,7 @@ int add_participant_interactive() {
             if (!validatePhone(phone)) { printf("Invalid phone.\n"); continue; }
             if (isPhoneDuplicate(phone)) {
                 printf("This phone number has already been registered by an active participant.\n");
-                continue; // 🚨 แก้ไขจาก return 0; เป็น continue; 🚨
+                continue; 
             }
             break;
         } while (1);
@@ -889,7 +904,7 @@ int admin_menu() {
             case 3: update_direct_admin(); break;
             case 4: delete_direct_admin(); break;
             case 5: display_all_admin(); break;
-            case 6: run_all_unit_tests(); break;
+            case 6: run_full_unit_test_suite(); break;
             case 7:
             case 8: printf("Logging out admin...\n"); break;
             default:
@@ -925,7 +940,7 @@ int participant_menu() {
             case 3: search_controller(0); break;
             case 4: participant_edit_self(); break;
             case 5: participant_delete_self(); break;
-            case 6: run_all_unit_tests(); break;
+            case 6: run_full_unit_test_suite(); break;
             case 7:
             case 8: printf("Returning to main menu...\n"); break;
             default:
@@ -936,127 +951,219 @@ int participant_menu() {
     return 0;
 }
 
-// ============================================
-//               UNIT TEST CODE
-// ============================================
-
-#define TEST_PASS 1
-#define TEST_FAIL 0
-
+/* ================================================================
+   FULL UNIT TEST SUITE: ADD + UPDATE + VALIDATION + SELF-EDIT
+   ================================================================ */
 int test_case_count = 0;
 int test_fail_count = 0;
 
-void print_test_result(const char *test_name, int result) {
-    printf("[%s] %-50s\n", (result == TEST_PASS) ? "PASS" : "FAIL", test_name);
+void print_test_result(const char *desc, int passed) {
     test_case_count++;
-    if (result == TEST_FAIL) {
+    if (passed) {
+        printf("[PASS] %s\n", desc);
+    } else {
+        printf("[FAIL] %s\n", desc);
         test_fail_count++;
     }
 }
 
-// --------------------------------------------
-// Test Suite 1: Validation Tests
-// --------------------------------------------
-void test_validation_suite() {
-    printf("--- Running Validation Tests ---\n");
-    char email1[] = "test@example.com";
-    print_test_result("Email: Valid format", validateEmail(email1));
-    char email2[] = "invalid-email";
-    print_test_result("Email: Invalid format (missing @)", validateEmail(email2) == TEST_FAIL);
-    char email3[] = "test@.com";
-    print_test_result("Email: Invalid format (missing domain part)", validateEmail(email3) == TEST_FAIL);
 
-    char phone1[] = "0812345678";
-    print_test_result("Phone: Valid format (08)", validatePhone(phone1));
-    char phone2[] = "0998765432";
-    print_test_result("Phone: Valid format (09)", validatePhone(phone2));
-    char phone3[] = "0611112222";
-    print_test_result("Phone: Valid format (06)", validatePhone(phone3));
-    char phone4[] = "1234567890";
-    print_test_result("Phone: Invalid format (starts wrong)", validatePhone(phone4) == TEST_FAIL);
-    char phone5[] = "081234567";
-    print_test_result("Phone: Invalid format (too short)", validatePhone(phone5) == TEST_FAIL);
+void backup_csv_full() {
+    FILE *src = fopen(CSV_FILE, "r");
+    if (!src) return;
+    FILE *dst = fopen("Seminar_backup_full.csv", "w");
+    if (!dst) { fclose(src); return; }
+    char buf[1024];
+    while (fgets(buf, sizeof(buf), src)) fputs(buf, dst);
+    fclose(src); fclose(dst);
 }
 
-// --------------------------------------------
-// Test Suite 2: Duplication Tests
-// NOTE: This test relies on existing data in Seminar.csv.
-// --------------------------------------------
-void test_duplication_suite() {
-    printf("--- Running Duplication Tests (Depends on Seminar.csv content) ---\n");
+void restore_csv_full() {
+    FILE *src = fopen("Seminar_backup_full.csv", "r");
+    if (!src) return;
+    FILE *dst = fopen(CSV_FILE, "w");
+    if (!dst) { fclose(src); return; }
+    char buf[1024];
+    while (fgets(buf, sizeof(buf), src)) fputs(buf, dst);
+    fclose(src); fclose(dst);
+    remove("Seminar_backup_full.csv");
+}
 
-    // 1. หาอีเมล/เบอร์โทรศัพท์ของ Active Participant เพื่อใช้ทดสอบการซ้ำซ้อน
+void setup_test_csv_full() {
+    FILE *fp = fopen(CSV_FILE, "w");
+    if (!fp) return;
+    fprintf(fp, "ID,ParticipantName,Email,PhoneNumber,RegistrationDate,Status\n");
+    fprintf(fp, "P0001,Alice,alice@test.com,0812345678,2025-10-01,Active\n");
+    fprintf(fp, "P0002,Bob,bob@test.com,0822222222,2025-10-02,Inactive\n");
+    fprintf(fp, "P0003,Charlie,charlie@test.com,0833333333,2025-10-03,Active\n");
+    fclose(fp);
+}
+
+/* simulate update (non-interactive) */
+int simulate_update_record(const char *targetEmail, const char *newEmail, const char *newPhone, const char *newName) {
     FILE *fp = fopen(CSV_FILE, "r");
-    char duplicate_email[256] = "";
-    char duplicate_phone[64] = "";
-    char found_id[64] = "";
+    if (!fp) return 0;
+    FILE *tmp = fopen("temp_update.csv", "w");
+    if (!tmp) { fclose(fp); return 0; }
     char line[MAXLINE];
-    
-    if (fp) {
-        fgets(line, sizeof(line), fp); // ข้ามส่วนหัว
-        while (fgets(line, sizeof(line), fp)) {
-            char id[64], name[256], email[256], p[64], date[64], status[64];
-            if (parse_line(line, id, name, email, p, date, status)) {
-                if (strcasecmp(status, "Active") == 0) {
-                    strcpy(duplicate_email, email);
-                    strcpy(duplicate_phone, p);
-                    strcpy(found_id, id);
-                    break;
-                }
-            }
+    fgets(line, sizeof(line), fp); fputs(line, tmp);
+    int updated = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        char id[64], name[256], email[256], phone[64], date[64], status[64];
+        if (!parse_line(line, id, name, email, phone, date, status)) {
+            fputs(line, tmp);
+            continue;
         }
-        fclose(fp);
+        if (strcmp(email, targetEmail) == 0) {
+            if (newEmail && strlen(newEmail) > 0) strcpy(email, newEmail);
+            if (newPhone && strlen(newPhone) > 0) strcpy(phone, newPhone);
+            if (newName && strlen(newName) > 0) strcpy(name, newName);
+            fprintf(tmp, "%s,%s,%s,%s,%s,%s\n", id, name, email, phone, date, status);
+            updated = 1;
+        } else fputs(line, tmp);
     }
-
-    if (strlen(found_id) > 0) {
-        printf("--- Using Active ID: %s for Duplication Checks ---\n", found_id);
-        
-        // T2.1: ทดสอบการเพิ่มใหม่ด้วยอีเมลที่ซ้ำกับ Active (ต้องล้มเหลว/ซ้ำ = 1)
-        print_test_result("Duplication: Add new with Active email (Should Fail)", isEmailDuplicate(duplicate_email));
-        
-        // T2.2: ทดสอบการแก้ไขตัวเองด้วยอีเมลเดิม (ต้องผ่าน/ไม่ซ้ำ = 0)
-        print_test_result("Duplication: Update self with same email (Should Pass)", isEmailDuplicateExcept(duplicate_email, found_id) == TEST_FAIL);
-
-        // T2.3: ทดสอบการเพิ่มใหม่ด้วยเบอร์โทรที่ซ้ำกับ Active (ต้องล้มเหลว/ซ้ำ = 1)
-        print_test_result("Duplication: Add new with Active phone (Should Fail)", isPhoneDuplicate(duplicate_phone));
-        
-        // T2.4: ทดสอบการแก้ไขตัวเองด้วยเบอร์โทรเดิม (ต้องผ่าน/ไม่ซ้ำ = 0)
-        print_test_result("Duplication: Update self with same phone (Should Pass)", isPhoneDuplicateExcept(duplicate_phone, found_id) == TEST_FAIL);
-        
-    } else {
-        printf("Skipped duplication tests: Could not find an Active participant in Seminar.csv.\n");
-        test_case_count += 4; // นับ 4 เคสนี้เป็นผ่านไปก่อนหากรันไม่ได้
-    }
-
-    // T2.5: ทดสอบการเพิ่มใหม่ด้วยอีเมลที่ไม่ซ้ำ (ต้องผ่าน/ไม่ซ้ำ = 0)
-    print_test_result("Duplication: Unique Email (Should Pass)", isEmailDuplicate("unique.test@example.com") == TEST_FAIL);
-    // T2.6: ทดสอบการเพิ่มใหม่ด้วยเบอร์โทรที่ไม่ซ้ำ (ต้องผ่าน/ไม่ซ้ำ = 0)
-    print_test_result("Duplication: Unique Phone (Should Pass)", isPhoneDuplicate("0991234567") == TEST_FAIL);
+    fclose(fp); fclose(tmp);
+    remove(CSV_FILE); rename("temp_update.csv", CSV_FILE);
+    return updated;
 }
 
-// --------------------------------------------
-// Main Unit Test Controller
-// --------------------------------------------
-void run_all_unit_tests() {
-    printf("\n============================================\n");
-    printf("           RUNNING UNIT TESTS\n");
-    printf("============================================\n");
+/* simulate participant self-edit */
+int participant_edit_self_sim(const char *email, const char *phone,
+    const char *newName, const char *newEmail, const char *newPhone) {
     
+    FILE *fp = fopen(CSV_FILE, "r");
+    if (!fp) return 0;
+    FILE *temp = fopen("temp_selfedit.csv", "w");
+    if (!temp) { fclose(fp); return 0; }
+
+    char line[MAXLINE];
+    fgets(line, sizeof(line), fp); fputs(line, temp);
+    int found = 0, updated = 0;
+
+    while (fgets(line, sizeof(line), fp)) {
+        char id[64], name[256], e[256], p[64], date[64], status[64];
+        if (!parse_line(line, id, name, e, p, date, status)) {
+            fputs(line, temp);
+            continue;
+        }
+
+        if (strcmp(e, email) == 0 && strcmp(p, phone) == 0) {
+            found = 1;
+
+            if (newEmail && strlen(newEmail) > 0) {
+                if (!validateEmail((char *)newEmail)) {
+                    fclose(fp); fclose(temp); remove("temp_selfedit.csv");
+                    return -1;
+                }
+                if (isEmailDuplicateExcept(newEmail, id)) {
+                    fclose(fp); fclose(temp); remove("temp_selfedit.csv");
+                    return -2;
+                }
+                strcpy(e, newEmail);
+            }
+
+            if (newPhone && strlen(newPhone) > 0) {
+                if (!validatePhone((char *)newPhone)) {
+                    fclose(fp); fclose(temp); remove("temp_selfedit.csv");
+                    return -3;
+                }
+                if (isPhoneDuplicateExcept(newPhone, id)) {
+                    fclose(fp); fclose(temp); remove("temp_selfedit.csv");
+                    return -4;
+                }
+                strcpy(p, newPhone);
+            }
+
+            if (newName && strlen(newName) > 0)
+                strcpy(name, newName);
+
+            fprintf(temp, "%s,%s,%s,%s,%s,%s\n", id, name, e, p, date, status);
+            updated = 1;
+        } else fputs(line, temp);
+    }
+
+    fclose(fp); fclose(temp);
+
+    if (!found) { remove("temp_selfedit.csv"); return 0; }
+    remove(CSV_FILE); rename("temp_selfedit.csv", CSV_FILE);
+    return updated ? 1 : 0;
+}
+
+/* MAIN TEST RUNNER */
+void run_full_unit_test_suite() {
+    printf("\n=== RUNNING FULL UNIT TEST SUITE ===\n");
     test_case_count = 0;
     test_fail_count = 0;
 
-    // รัน Test Suites ทั้งหมด
-    test_validation_suite();
-    test_duplication_suite();
+    backup_csv_full();
+    setup_test_csv_full();
+
+    /* ------------------ ADD TESTS ------------------ */
+    printf("\n--- ADD TESTS ---\n");
+    print_test_result("Add: Valid data", saveCSV("P0004", "David", "david@test.com", "0844444444", "2025-10-05", "Active") == 1);
+    print_test_result("Add: Invalid email format", validateEmail("bademail@") == 0);
+    print_test_result("Add: Invalid phone format", validatePhone("12345") == 0);
+    print_test_result("Add: Duplicate active email detected", isEmailDuplicate("alice@test.com") == 1);
+    print_test_result("Add: Duplicate inactive email allowed", isEmailDuplicate("bob@test.com") == 0);
+    print_test_result("Add: Duplicate active phone detected", isPhoneDuplicate("0812345678") == 1);
+    print_test_result("Add: Duplicate inactive phone allowed", isPhoneDuplicate("0822222222") == 0);
+
+    /* ------------------ UPDATE TESTS ------------------ */
+    printf("\n--- UPDATE TESTS ---\n");
+    print_test_result("Update: Valid name change", simulate_update_record("alice@test.com", NULL, NULL, "AliceUpdated") == 1);
+    print_test_result("Update: Invalid email rejected", validateEmail("wrong@@com") == 0);
+    print_test_result("Update: Invalid phone rejected", validatePhone("abcd12345") == 0);
+    print_test_result("Update: Duplicate active email detected", isEmailDuplicateExcept("charlie@test.com", "P0001") == 1);
+    print_test_result("Update: Duplicate inactive email allowed", isEmailDuplicateExcept("bob@test.com", "P0001") == 0);
+    print_test_result("Update: Duplicate active phone detected", isPhoneDuplicateExcept("0833333333", "P0001") == 1);
+    print_test_result("Update: Duplicate inactive phone allowed", isPhoneDuplicateExcept("0822222222", "P0001") == 0);
+
+    /* ------------------ VALIDATION TESTS ------------------ */
+    printf("\n--- EMAIL & PHONE VALIDATION TESTS ---\n");
+    // email
+    print_test_result("Email: missing @", validateEmail("email.com") == 0);
+    print_test_result("Email: starts with @", validateEmail("@mail.com") == 0);
+    print_test_result("Email: ends with @", validateEmail("email@") == 0);
+    print_test_result("Email: missing domain part", validateEmail("email@com") == 0);
+    print_test_result("Email: space in address", validateEmail("e mail@test.com") == 0);
+    print_test_result("Email: multiple @ signs", validateEmail("email@@test.com") == 0);
+    print_test_result("Email: missing dot after @", validateEmail("email@testcom") == 0);
+    print_test_result("Email: only domain no name", validateEmail("@example.com") == 0);
+    print_test_result("Email: only name no domain", validateEmail("example@") == 0);
+    print_test_result("Email: dot at end", validateEmail("user@test.com.") == 1); 
+    print_test_result("Email: subdomain valid", validateEmail("user@sub.test.com") == 1);
+    print_test_result("Email: valid normal", validateEmail("valid.email@test.com") == 1);
+    print_test_result("Email: uppercase valid", validateEmail("USER@TEST.COM") == 1);
     
-    printf("\n--------------------------------------------\n");
-    printf("Test Summary: %d total tests run, %d failed.\n", test_case_count, test_fail_count);
-    if (test_fail_count == 0) {
-        printf("ALL TESTS PASSED! ✅\n");
-    } else {
-        printf("TESTS FAILED! ❌\n");
-    }
-    printf("============================================\n");
+    // phone
+    print_test_result("Phone: letters invalid", validatePhone("0812abc567") == 0);
+    print_test_result("Phone: too short", validatePhone("08123") == 0);
+    print_test_result("Phone: invalid prefix", validatePhone("0512345678") == 0);
+    print_test_result("Phone: valid 08", validatePhone("0812345678") == 1);
+    print_test_result("Phone: valid 09", validatePhone("0912345678") == 1);
+    print_test_result("Phone: valid 06", validatePhone("0612345678") == 1);
+
+    /* ------------------ PARTICIPANT SELF-EDIT ------------------ */
+    printf("\n--- PARTICIPANT SELF-EDIT TESTS ---\n");
+    print_test_result("Self-edit: valid name change", participant_edit_self_sim("alice@test.com", "0812345678", "AliceSelfEdit", NULL, NULL) == 1);
+    print_test_result("Self-edit: email/phone mismatch", participant_edit_self_sim("wrong@test.com", "0812345678", "X", NULL, NULL) == 0);
+    print_test_result("Self-edit: invalid new email", participant_edit_self_sim("alice@test.com", "0812345678", NULL, "bademail@", NULL) == -1);
+    print_test_result("Self-edit: duplicate active email", participant_edit_self_sim("alice@test.com", "0812345678", NULL, "charlie@test.com", NULL) == -2);
+    print_test_result("Self-edit: duplicate inactive email allowed", participant_edit_self_sim("alice@test.com", "0812345678", NULL, "bob@test.com", NULL) == 1);
+    print_test_result("Self-edit: invalid phone", participant_edit_self_sim("charlie@test.com", "0833333333", NULL, NULL, "12abcd5678") == -3);
+    print_test_result("Self-edit: duplicate active phone", participant_edit_self_sim("charlie@test.com", "0833333333", NULL, NULL, "0812345678") == -4);
+    print_test_result("Self-edit: duplicate inactive phone allowed", participant_edit_self_sim("charlie@test.com", "0833333333", NULL, NULL, "0822222222") == 1);
+
+    /* ------------------ RESULT SUMMARY ------------------ */
+    printf("\n====================================================\n");
+    printf("Total Tests: %d, Failed: %d\n", test_case_count, test_fail_count);
+    if (test_fail_count == 0)
+        printf("ALL TESTS PASSED SUCCESSFULLY!\n");
+    else
+        printf("SOME TESTS FAILED. CHECK LOG ABOVE.\n");
+    printf("====================================================\n");
+
+    restore_csv_full();
 }
 
 
