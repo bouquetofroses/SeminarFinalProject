@@ -4,6 +4,13 @@
 ---
 
 ## Project Overview
+```bash
+โปรเจกต์นี้คือ ระบบจัดการผู้เข้าร่วมสัมมนา
+พัฒนาด้วยภาษา C ระบบถูกออกแบบมาเพื่อรองรับผู้ใช้งานสองกลุ่มหลัก: - **ผู้ดูแลระบบ (Admin)**
+- **ผู้เข้าร่วม (Participant)**
+โดยใช้ไฟล์ CSV (Seminar.csv) ในการจัดเก็บและจัดการข้อมูลอย่างมีประสิทธิภาพ
+```
+---
 
 ## ADMIN Features
 - **Login system** (Username: 'admin', Password: '1234')
@@ -25,3 +32,41 @@
 - **Delete** own record (mark as 'Inactive')
 - Run **UNIT TEST**
 - Run **E2E TEST**
+
+##  How to Compile & Run
+```bash
+gcc SeminarFinalProject.c -o SeminarFinalProject
+SeminarFinalProject.exe
+```
+---
+## Example run
+```bash
+============================================
+       WELCOME TO SEMINAR SYSTEM
+============================================
+Are you an admin? (y/n): y
+
+Admin login required.
+========================
+|   USERNAME = admin   |
+|   PASSWORD = 1234    |
+========================
+Username: admin
+Password: 1234
+
+Login successful.
+
+===========================================================
+                        ADMIN MENU
+===========================================================
+1. Add participant
+2. Search participant (full info)
+3. Update participant (admin)
+4. Delete participant (set Inactive)
+5. Display all participants
+6. Run Unit Tests
+7. Run E2E Tests
+8. Logout to main
+===========================================================
+Choose option:
+```
