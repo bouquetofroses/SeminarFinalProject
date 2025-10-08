@@ -40,6 +40,10 @@ int participant_delete_self();
 void print_test_result(const char *desc, int passed);
 void run_full_unit_test_suite();
 
+int check_record_status(const char *id_to_find);
+int simulate_add_record(const char *name, const char *email, const char *phone, char *out_id, size_t out_sz);
+int simulate_delete_record(const char *targetID);
+void run_full_e2e_test_suite();
 
 //สร้างไฟล์
 int createfile()
@@ -905,7 +909,7 @@ int admin_menu() {
             case 4: delete_direct_admin(); break;
             case 5: display_all_admin(); break;
             case 6: run_full_unit_test_suite(); break;
-            case 7:
+            case 7: run_full_e2e_test_suite(); break;
             case 8: printf("Logging out admin...\n"); break;
             default:
                 printf("Invalid choice. Please select 1-8 only.\n");
@@ -941,7 +945,7 @@ int participant_menu() {
             case 4: participant_edit_self(); break;
             case 5: participant_delete_self(); break;
             case 6: run_full_unit_test_suite(); break;
-            case 7:
+            case 7: run_full_e2e_test_suite(); break;
             case 8: printf("Returning to main menu...\n"); break;
             default:
                 printf("Invalid choice. Please select 1-8 only.\n");
@@ -1166,6 +1170,127 @@ void run_full_unit_test_suite() {
     restore_csv_full();
 }
 
+// Helper: ตรวจสอบสถานะของ Record (1=Active, 2=Inactive, 0=Not Found)
+int check_record_status(const char *id_to_find) {
+    FILE *fp = fopen(CSV_FILE, "r");
+    if (!fp) return 0;
+    char line[MAXLINE];
+    fgets(line, sizeof(line), fp); // skip header
+    while (fgets(line, sizeof(line), fp)) {
+        char id[64], name[256], email[256], phone[64], date[64], status[64];
+        if (parse_line(line, id, name, email, phone, date, status)) {
+            if (strcmp(id, id_to_find) == 0) {
+                fclose(fp);
+                if (strcasecmp(status, "Active") == 0) return 1;
+                if (strcasecmp(status, "Inactive") == 0) return 2;
+                return 0; 
+            }
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+// Helper: จำลองการเพิ่มผู้เข้าร่วม (non-interactive)
+int simulate_add_record(const char *name, const char *email, const char *phone, char *out_id, size_t out_sz) {
+    char regDate[64], id[64];
+    getToday(regDate, sizeof(regDate));
+    generateID(id, sizeof(id));
+    if (saveCSV(id, name, email, phone, regDate, "Active")) {
+        strncpy(out_id, id, out_sz);
+        return 1;
+    }
+    return 0;
+}
+
+/* Helper: จำลองการลบ Record โดย Admin (เปลี่ยนเป็น Inactive) */
+int simulate_delete_record(const char *targetID) {
+    FILE *fp = fopen(CSV_FILE, "r");
+    if (!fp) return 0;
+    FILE *tmp = fopen("temp_delete.csv", "w");
+    if (!tmp) { fclose(fp); return 0; }
+    char line[MAXLINE];
+    fgets(line, sizeof(line), fp); fputs(line, tmp);
+    int deleted = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        char id[64], name[256], email[256], phone[64], date[64], status[64];
+        if (!parse_line(line, id, name, email, phone, date, status)) {
+            fputs(line, tmp);
+            continue;
+        }
+        if (strcmp(id, targetID) == 0) {
+            fprintf(tmp, "%s,%s,%s,%s,%s,%s\n", id, name, email, phone, date, "Inactive");
+            deleted = 1;
+        } else fputs(line, tmp);
+    }
+    fclose(fp); fclose(tmp);
+    if (deleted) {
+        remove(CSV_FILE); rename("temp_delete.csv", CSV_FILE);
+    } else {
+        remove("temp_delete.csv");
+    }
+    return deleted;
+}
+
+/* ================================================================
+   E2E TEST SUITE: Simulates full Admin and Participant workflows
+   ================================================================ */
+void run_full_e2e_test_suite() {
+    printf("\n=== RUNNING FULL E2E TEST SUITE (ADMIN & PARTICIPANT) ===\n");
+    test_case_count = 0;
+    test_fail_count = 0;
+
+    backup_csv_full();
+    setup_test_csv_full(); // Start with P0001, P0002(Inactive), P0003
+
+    char newID[64];
+    
+    /* ------------------ PARTICIPANT WORKFLOW E2E ------------------ */
+    printf("\n--- PARTICIPANT E2E: ADD, SELF-EDIT, SELF-DELETE ---\n");
+    
+    // E2E Step 1: Register (Add)
+    int add_success = simulate_add_record("Test User E2E", "e2e.user@test.com", "0665554444", newID, sizeof(newID));
+    print_test_result("E2E 1.1: Register new participant", add_success == 1);
+    print_test_result("E2E 1.2: Verify new record is Active", check_record_status(newID) == 1);
+
+    // E2E Step 2: Self-Edit (Edit Name & Phone)
+    int edit_success = participant_edit_self_sim("e2e.user@test.com", "0665554444", "User Edited", NULL, "0661112222");
+    print_test_result("E2E 2.1: Self-edit successful", edit_success == 1);
+    
+    // E2E Step 3: Self-Delete (Set Inactive)
+    // เนื่องจากไม่มีฟังก์ชันจำลอง self-delete เราจะใช้ simulate_delete_record แทนเพื่อตรวจสอบสถานะสุดท้าย
+    // ในการใช้งานจริง ผู้เข้าร่วมจะเข้าถึงฟังก์ชัน participant_delete_self()
+    int delete_sim_success = simulate_delete_record(newID);
+    print_test_result("E2E 3.1: Self-delete successful (simulated)", delete_sim_success == 1);
+    print_test_result("E2E 3.2: Verify final status is Inactive", check_record_status(newID) == 2);
+
+
+    /* ------------------ ADMIN WORKFLOW E2E ------------------ */
+    printf("\n--- ADMIN E2E: UPDATE & DELETE ON EXISTING RECORD ---\n");
+    const char *adminTargetID = "P0003"; // Charlie, charlie@test.com, 0833333333
+
+    // E2E Step 4: Admin Update (Change Email/Phone for P0003)
+    // จำลองการอัปเดต Email/Phone ที่ถูกต้อง
+    int admin_update = simulate_update_record("charlie@test.com", "charlie.upd@test.com", "0839999999", NULL);
+    print_test_result("E2E 4.1: Admin update successful", admin_update == 1);
+    
+    // E2E Step 5: Admin Delete (Set P0003 to Inactive)
+    int admin_delete = simulate_delete_record(adminTargetID);
+    print_test_result("E2E 5.1: Admin delete successful", admin_delete == 1);
+    print_test_result("E2E 5.2: Verify P0003 status is Inactive", check_record_status(adminTargetID) == 2);
+
+
+    /* ------------------ RESULT SUMMARY ------------------ */
+    printf("\n====================================================\n");
+    printf("E2E Test Summary: Total Tests: %d, Failed: %d\n", test_case_count, test_fail_count);
+    if (test_fail_count == 0)
+        printf("ALL E2E TESTS PASSED SUCCESSFULLY!\n");
+    else
+        printf("SOME E2E TESTS FAILED. CHECK LOG ABOVE.\n");
+    printf("====================================================\n");
+
+    restore_csv_full();
+}
 
 int main()
 {
