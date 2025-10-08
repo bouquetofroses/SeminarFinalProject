@@ -113,7 +113,7 @@ int validateEmail (char *email)
 }
 
 
-// check email duplicate except a given ID (used when updating)
+
 int isEmailDuplicateExcept(const char *email, const char *except_id) {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) return 0;
@@ -133,7 +133,6 @@ int isEmailDuplicateExcept(const char *email, const char *except_id) {
     return 0;
 }
 
-// check email duplicate in entire file
 int isEmailDuplicate(const char *email) {
     return isEmailDuplicateExcept(email, NULL);
 }
@@ -207,21 +206,16 @@ void trim_newline(char *s) {
     if (L>1 && s[L-2]=='\r') s[L-2]=0;
 }
 
-// parse a CSV line into 6 fields (ID,Name,Email,Phone,Date,Status)
-// returns 1 if parsed, 0 otherwise
 int parse_line(const char *line, char *id, char *name, char *email, char *phone, char *date, char *status) {
     if (!line) return 0;
     char tmp[MAXLINE];
     strncpy(tmp, line, sizeof(tmp)-1); tmp[sizeof(tmp)-1]=0;
     trim_newline(tmp);
 
-    // count commas
     int commas = 0;
     for (size_t i=0;i<strlen(tmp);i++) if (tmp[i]==',') commas++;
 
     if (commas == 3) {
-        // old format: Name,Email,Phone,Date
-        // assign ID = "-" and status = "Active" by default
         char *t = tmp;
         char *f1 = strtok(t, ",");
         char *f2 = strtok(NULL, ",");
@@ -236,7 +230,6 @@ int parse_line(const char *line, char *id, char *name, char *email, char *phone,
         strcpy(status, "Active");
         return 1;
     } else {
-    // try parse up to 6 fields
         char *t = tmp;
         char *token;
         token = strtok(t, ","); if (!token) return 0; strcpy(id, token);
@@ -250,12 +243,11 @@ int parse_line(const char *line, char *id, char *name, char *email, char *phone,
     }
 }
 
-// สร้าง ID ถัดไป จากไฟล์ (รูปแบบ P0001)
+// สร้าง ID 
 int generateID(char *out_id, size_t out_sz) {
     FILE *fp = fopen("Seminar.csv", "r");
     int maxnum = 0 ;
     if (!fp) {
-        // if cannot open, start from P0001
         snprintf(out_id, out_sz, "P%04d", 1);
         return 1;
     }
@@ -264,7 +256,6 @@ int generateID(char *out_id, size_t out_sz) {
     while (fgets(line, sizeof(line), fp)) {
         char id[64], name[256], email[256], phone[64], date[64], status[64];
         if (parse_line(line, id, name, email, phone, date, status)) {
-            // id like P0001
             if (id[0]=='P') {
                 int num = atoi(id+1);
                 if (num > maxnum) maxnum = num;
@@ -277,7 +268,6 @@ int generateID(char *out_id, size_t out_sz) {
     return 1;
 }
 
-// Compare function for qsort (sort by ID)
 int compareByID(const void *a, const void *b) {
     const char (*recA)[MAXLINE] = a;
     const char (*recB)[MAXLINE] = b;
@@ -288,7 +278,6 @@ int compareByID(const void *a, const void *b) {
     return strcmp(idA, idB);
 }
 
-// ฟังก์ชันตรวจสิทธิ์ admin แบบง่าย
 int admin_login() {
     char user[64], pass[64];
     printf("\nAdmin login required.\n");
@@ -302,7 +291,6 @@ int admin_login() {
     if (scanf("%49s", pass) != 1) { while(getchar()!='\n'); return 0; }
     while(getchar()!='\n');
 
-    // ค่า default — คุณสามารถเปลี่ยนได้ตามต้องการ
     if (strcmp(user, "admin") == 0 && strcmp(pass, "1234") == 0) {
         printf("\nLogin successful.\n");
         return 1;
@@ -324,11 +312,11 @@ int add_participant_interactive() {
         // email
         do {
             printf("Enter email: ");
-            for (int i = 0; email[i]; i++)
-            email[i] = tolower((unsigned char)email[i]);
+    
             if (fgets(email, sizeof(email), stdin) == NULL) return 0;
             trim_newline(email);
-
+            for (int i = 0; email[i]; i++)
+                 email[i] = tolower((unsigned char)email[i]);
             if (!validateEmail(email)) { printf("Invalid email format.\n"); continue; }
 
             if (isEmailDuplicate(email)) { 
@@ -378,12 +366,8 @@ int add_participant_interactive() {
     return 0;
 }
 
-/* ---------- Update (admin direct) ---------- */
-/* Behavior: admin can search and choose a record to update (no need to verify email+phone)
-   Uses a temporary file approach. Update allows pressing Enter to keep old values.
-*/
 int update_info_interactive(FILE *temp, const char *orig_id, const char *orig_status) {
-    // retrieve current values
+    
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) { printf("Cannot open file.\n"); return 0; }
     char line[MAXLINE];
@@ -472,7 +456,7 @@ int update_info_interactive(FILE *temp, const char *orig_id, const char *orig_st
     return 1;
 }
 
-// เปลี่ยนสถานะเป็น Inactive (ยืนยันก่อน)
+// เปลี่ยนสถานะเป็น Inactive 
 int set_inactive(FILE *temp, const char *line)
 {
     char id[50], name[200], email[200], phone[50], date[50], status[20];
@@ -487,7 +471,7 @@ int set_inactive(FILE *temp, const char *line)
     if (scanf(" %c", &confirm) != 1) { while(getchar()!='\n'); fprintf(temp, "%s", line); return 0; }
     while(getchar()!='\n');
     if (confirm != 'y' && confirm != 'Y') {
-        // ยกเลิก -> เขียนบรรทัดเดิม
+        // ยกเลิก 
         fprintf(temp, "%s", line);
         printf("Delete cancelled.\n");
         return 0;
@@ -571,9 +555,9 @@ int search_controller(int isAdmin) {
     return 1;
 }
 
-//update หน้าเมนู
+//update admin only
 int update_direct_admin() {
-    // Admin-only function: search and update a chosen record
+    
     char keyword[256];
     printf("Enter keyword to find record to update: ");
     if (fgets(keyword, sizeof(keyword), stdin) == NULL) return 0;
@@ -583,7 +567,7 @@ int update_direct_admin() {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) { printf("Cannot open file.\n"); return 0; }
     char line[MAXLINE];
-    fgets(line, sizeof(line), fp); // header
+    fgets(line, sizeof(line), fp); 
     char records[200][MAXLINE];
     int count = 0;
     while (fgets(line, sizeof(line), fp)) {
@@ -606,7 +590,7 @@ int update_direct_admin() {
     if (scanf("%d", &idx) != 1) { while(getchar()!='\n'); return 0; }
     while(getchar()!='\n');
     if (idx <= 0 || idx > count) { printf("Cancelled.\n"); return 0; }
-    // create temp, write header, for each record choose update
+    // temp
     FILE *temp = fopen("temp.csv", "w");
     if (!temp) { printf("Cannot create temp file.\n"); return 0; }
     fprintf(temp, "ID,ParticipantName,Email,PhoneNumber,RegistrationDate,Status\n");
@@ -619,7 +603,7 @@ int update_direct_admin() {
             fprintf(temp, "%s", records[i]);
         }
     }
-    // write remaining lines from original not in matched records
+    
     FILE *orig = fopen(CSV_FILE, "r");
     if (!orig) { fclose(temp); printf("Cannot reopen original file.\n"); return 0; }
     fgets(line, sizeof(line), orig);
@@ -634,8 +618,7 @@ int update_direct_admin() {
     return 1;
 }
 
-/* ---------- Delete (admin direct) ---------- */
-// set Status = Inactive with confirm
+//delete admin only (inactive)
 int delete_direct_admin() {
     char keyword[256];
     printf("Enter keyword to find record to delete (set Inactive): ");
@@ -646,7 +629,7 @@ int delete_direct_admin() {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) { printf("Cannot open file.\n"); return 0; }
     char line[MAXLINE];
-    fgets(line, sizeof(line), fp); // header
+    fgets(line, sizeof(line), fp); 
     char records[200][MAXLINE];
     int count = 0;
     while (fgets(line, sizeof(line), fp)) {
@@ -689,7 +672,7 @@ int delete_direct_admin() {
             fprintf(temp, "%s", records[i]);
         }
     }
-    // copy rest
+    
     FILE *orig = fopen(CSV_FILE, "r");
     if (!orig) { fclose(temp); printf("Cannot reopen original file.\n"); return 0; }
     fgets(line, sizeof(line), orig);
@@ -704,8 +687,7 @@ int delete_direct_admin() {
     return 1;
 }
 
-/* ---------- Participant self-edit / delete (requires email+phone verification) ---------- */
-// edit own info: find by email+phone, then run interactive update (keeps ID & Status)
+//update (edit) ของผู้เข้าร่วม (มีให้ยืนยันตัวตน)
 int participant_edit_self() {
     char email[256], phone[64];
     printf("To edit your data, enter your registered email: ");
@@ -754,7 +736,7 @@ int participant_edit_self() {
     return 1;
 }
 
-// participant delete self: verify email+phone, then set Inactive after confirm
+//delete (inactive) ของผู้เข้าร่วม (มีให้ยืนยันตัวตน)
 int participant_delete_self() {
     char email[256], phone[64];
     printf("To delete your data, enter your registered email: ");
@@ -810,8 +792,7 @@ int participant_delete_self() {
     return 1;
 }
 
-/* ---------- Display functions ---------- */
-// Admin: show all fields
+//แสดงข้อมูของแอดมิน แสดงทั้งหมด 
 void display_all_admin() {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) { printf("Cannot open %s\n", CSV_FILE); return; }
@@ -846,7 +827,7 @@ void display_all_admin() {
     }
     printf("===============================================================================================\n");
 }
-// Participant: limited display (ID, Name, RegDate) -- show only Active
+//แสดงข้อมูล ของผู้เข้าร่วม ไม่แสดงอีเมล เบอร์
 void display_limited() {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) { printf("Cannot open %s\n", CSV_FILE); return; }
@@ -880,9 +861,7 @@ void display_limited() {
     printf("===================================================================\n");
 }
 
-//แสดงเมนู 
-/* ---------- Menus ---------- */
-
+//เมนูของแอดมิน
 int admin_menu() {
     int choice = 0;
     do {
@@ -918,7 +897,7 @@ int admin_menu() {
     } while (choice != 8);
     return 0;
 }
-
+//เมนูของผู้เข้าร่วม
 int participant_menu() {
     int choice = 0;
     do {
@@ -956,7 +935,7 @@ int participant_menu() {
 }
 
 /* ================================================================
-   FULL UNIT TEST SUITE: ADD + UPDATE + VALIDATION + SELF-EDIT
+   UNIT TEST : ADD + UPDATE + VALIDATION + SELF-EDIT
    ================================================================ */
 int test_case_count = 0;
 int test_fail_count = 0;
@@ -1003,7 +982,6 @@ void setup_test_csv_full() {
     fclose(fp);
 }
 
-/* simulate update (non-interactive) */
 int simulate_update_record(const char *targetEmail, const char *newEmail, const char *newPhone, const char *newName) {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) return 0;
@@ -1031,7 +1009,6 @@ int simulate_update_record(const char *targetEmail, const char *newEmail, const 
     return updated;
 }
 
-/* simulate participant self-edit */
 int participant_edit_self_sim(const char *email, const char *phone,
     const char *newName, const char *newEmail, const char *newPhone) {
     
@@ -1093,7 +1070,6 @@ int participant_edit_self_sim(const char *email, const char *phone,
     return updated ? 1 : 0;
 }
 
-/* MAIN TEST RUNNER */
 void run_full_unit_test_suite() {
     printf("\n=== RUNNING FULL UNIT TEST SUITE ===\n");
     test_case_count = 0;
@@ -1170,7 +1146,6 @@ void run_full_unit_test_suite() {
     restore_csv_full();
 }
 
-// Helper: ตรวจสอบสถานะของ Record (1=Active, 2=Inactive, 0=Not Found)
 int check_record_status(const char *id_to_find) {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) return 0;
@@ -1191,7 +1166,6 @@ int check_record_status(const char *id_to_find) {
     return 0;
 }
 
-// Helper: จำลองการเพิ่มผู้เข้าร่วม (non-interactive)
 int simulate_add_record(const char *name, const char *email, const char *phone, char *out_id, size_t out_sz) {
     char regDate[64], id[64];
     getToday(regDate, sizeof(regDate));
@@ -1203,7 +1177,6 @@ int simulate_add_record(const char *name, const char *email, const char *phone, 
     return 0;
 }
 
-/* Helper: จำลองการลบ Record โดย Admin (เปลี่ยนเป็น Inactive) */
 int simulate_delete_record(const char *targetID) {
     FILE *fp = fopen(CSV_FILE, "r");
     if (!fp) return 0;
@@ -1335,6 +1308,8 @@ int main()
     } while (again == 1);
 
     printf("Goodbye.\n");
+    printf("\nPress Enter to exit...");
+    getchar();
     return 0;
 }
 
