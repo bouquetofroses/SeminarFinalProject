@@ -2,7 +2,13 @@
 **Final Project - Programming Fundamentals (CECS01)**
 
 ---
-
+## Project Overview
+```bash
+โปรเจกต์นี้คือ ระบบจัดการผู้เข้าร่วมสัมมนา แบบ Command-Line Interface (CLI)
+พัฒนาด้วยภาษา C ระบบถูกออกแบบมาเพื่อรองรับผู้ใช้งานสองกลุ่มหลัก: ผู้ดูแลระบบ (Admin) และ ผู้เข้าร่วม (Participant)
+โดยใช้ไฟล์ CSV (Seminar.csv) ในการจัดเก็บและจัดการข้อมูลอย่างมีประสิทธิภาพ
+```
+---
 ## ADMIN Features
 - **Login system** (Username: 'admin', Password: '1234')
 - **Add** new participants
@@ -30,3 +36,36 @@
 ```bash
 gcc SeminarFinalProject.c -o SeminarFinalProject
 SeminarFinalProject.exe
+```
+---
+## Example run
+```bash
+============================================
+       WELCOME TO SEMINAR SYSTEM
+============================================
+Are you an admin? (y/n): y
+
+Admin login required.
+========================
+|   USERNAME = admin   |
+|   PASSWORD = 1234    |
+========================
+Username: admin
+Password: 1234
+
+Login successful.
+
+===========================================================
+                        ADMIN MENU
+===========================================================
+1. Add participant
+2. Search participant (full info)
+3. Update participant (admin)
+4. Delete participant (set Inactive)
+5. Display all participants
+6. Run Unit Tests
+7. Run E2E Tests
+8. Logout to main
+===========================================================
+Choose option:
+```
