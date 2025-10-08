@@ -40,7 +40,7 @@ gcc SeminarFinalProject.c -o SeminarFinalProject
 SeminarFinalProject.exe
 ```
 ---
-## Example run
+## Example run (ADMIN Features)
 ```bash
 ============================================
        WELCOME TO SEMINAR SYSTEM
@@ -68,6 +68,28 @@ Login successful.
 6. Run Unit Tests
 7. Run E2E Tests
 8. Logout to main
+===========================================================
+Choose option:
+```
+---
+## Example run (PARTICIPLE Features)
+```bash
+============================================
+       WELCOME TO SEMINAR SYSTEM
+============================================
+Are you an admin? (y/n): n
+
+===========================================================
+                     PARTICIPANT MENU
+===========================================================
+| 1  | Register (Add participant)                         |
+| 2  | Show participants (ID, Name, RegDate, Status)      |
+| 3  | Search participant (limited view)                  |
+| 4  | Edit your info (verify email+phone)                |
+| 5  | Delete your info (verify email+phone)              |
+| 6  | Run Unit Tests                                     |
+| 7  | Run E2E Tests                                      |
+| 8  | Exit to main                                       |
 ===========================================================
 Choose option:
 ```
