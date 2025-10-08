@@ -1,2 +1,4 @@
-# SeminarFinalProject
-ระบบจัดการข้อมูลผู้เข้าร่วมสัมมนา
+# Seminar Management System
+Final Project - Programming Fundamentals (CECS01)
+
+---
