@@ -3,8 +3,6 @@
 
 ---
 
-## Project Overview
-
 ## ADMIN Features
 - **Login system** (Username: 'admin', Password: '1234')
 - **Add** new participants
@@ -25,3 +23,10 @@
 - **Delete** own record (mark as 'Inactive')
 - Run **UNIT TEST**
 - Run **E2E TEST**
+
+---
+
+##  How to Compile & Run
+```bash
+gcc SeminarFinalProject.c -o SeminarFinalProject
+SeminarFinalProject.exe
