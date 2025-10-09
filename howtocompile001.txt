@@ -1,0 +1,19 @@
+โปรแกรมหลักแยกกับ unit test และ E2E test
+
+* `SeminarFinalProject.c`: โค้ดโปรแกรมหลัก
+* `unit_test.c`: โค้ดสำหรับ Unit Test
+* `e2e_test.c`: โค้ดสำหรับ End-to-End Test
+* `test_helpers.c`: ฟังก์ชันช่วยเหลือที่ใช้ร่วมกันในไฟล์ Test
+* `project.h`: Header File กลางของโปรเจกต์
+* `Seminar.csv`: ไฟล์ฐานข้อมูลตัวอย่าง\
+
+compile
+gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
+
+run
+.\program.exe
+
+**หนูกลัวว่าถ้าแยกไฟล์ unit test และ E2E test แล้วตอนคอมไพล์มันจะ error 
+เลยมีไฟล์โปรแกรมรวมไว้ในโฟลเดอร์ เป็นโปรแกรมหลักรวมกับ unit test และ E2E test
+โดยใช้ไฟล์ csv เดียวกัน
+ขอบคุณค่ะ 
