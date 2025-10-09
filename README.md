@@ -39,6 +39,7 @@ gcc SeminarFinalProjectall.c -o seminar
 ## Run
 ```bash
 seminar.exe
+หรือ
 ./seminar
 ```
 ---
