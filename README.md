@@ -4,9 +4,6 @@
 ---
 
 ## Project Overview
-
-
-=======
 ```bash
 โปรเจกต์นี้คือ ระบบจัดการผู้เข้าร่วมสัมมนา
 พัฒนาด้วยภาษา C ระบบถูกออกแบบมาเพื่อรองรับผู้ใช้งานสองกลุ่มหลัก:
@@ -14,9 +11,25 @@
 - ผู้เข้าร่วม (Participant)
 โดยใช้ไฟล์ CSV (Seminar.csv) ในการจัดเก็บและจัดการข้อมูลอย่างมีประสิทธิภาพ
 ```
-
 ---
-
+## File in Project
+* `SeminarFinalProject.c`: โค้ดโปรแกรมหลัก
+* `unit_test.c`: โค้ดสำหรับ Unit Test
+* `e2e_test.c`: โค้ดสำหรับ End-to-End Test
+* `test_helpers.c`: ฟังก์ชันช่วยเหลือที่ใช้ร่วมกันในไฟล์ Test
+* `project.h`: Header File กลางของโปรเจกต์
+* `Seminar.csv`: ไฟล์ฐานข้อมูลตัวอย่าง
+---
+##  How to Compile & Run
+### Compile
+```bash
+gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall\
+```
+### Run
+```bash
+.\program.exe
+```
+---
 ## ADMIN Features
 - **Login system** (Username: 'admin', Password: '1234')
 - **Add** new participants
@@ -38,17 +51,6 @@
 - Run **UNIT TEST**
 - Run **E2E TEST**
 
----
-
-##  How to Compile & Run
-### Compile
-```bash
-gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall\
-```
-### Run
-```bash
-.\program.exe
-```
 ---
 ## Example run (ADMIN Features)
 ```bash
