@@ -1,0 +1,8 @@
+โปรแกรมหลักรวมกับ unit test และ E2E test
+
+compile
+gcc SeminarFinalProjectall.c -o seminar
+
+run
+seminar.exe
+./seminar
