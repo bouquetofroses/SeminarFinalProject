@@ -42,9 +42,13 @@
 ---
 
 ##  How to Compile & Run
+### Compile
 ```bash
-gcc SeminarFinalProject.c -o SeminarFinalProject
-SeminarFinalProject.exe
+gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall\
+```
+### Run
+```bash
+.\program.exe
 ```
 ---
 ## Example run (ADMIN Features)
