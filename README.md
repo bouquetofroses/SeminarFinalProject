@@ -19,8 +19,6 @@
 * `test_helpers.c`: ฟังก์ชันช่วยเหลือที่ใช้ร่วมกันในไฟล์ Test
 * `project.h`: Header File กลางของโปรเจกต์
 * `Seminar.csv`: ไฟล์ฐานข้อมูลตัวอย่าง
----
-##  How to Compile & Run
 ### Compile
 ```bash
 gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
