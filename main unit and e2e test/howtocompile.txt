@@ -1,8 +1,9 @@
 โปรแกรมหลักรวมกับ unit test และ E2E test
 
-compile
-gcc SeminarFinalProjectall.c -o seminar
+### Compile
+* `Windows`:  gcc -o seminar.exe SeminarFinalProjectall.c
+* `macOS`: gcc -o seminar SeminarFinalProjectall.c
 
-run
-seminar.exe
-./seminar
+## Run
+* `Windows`: ./seminar.exe
+* `macOS`: ./seminar
