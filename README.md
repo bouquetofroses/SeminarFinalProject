@@ -28,6 +28,21 @@ gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wext
 .\program.exe
 ```
 ---
+
+## 📁 main unit and e2e test ( กรณีฉุกเฉิน )
+* `SeminarFinalProjectall.c`: โค้ดโปรแกรมหลัก + unit test + E2E test
+* `howtocompile.txt` : วิธีคอมไพล์
+### Compile
+```bash
+gcc SeminarFinalProjectall.c -o seminar
+```
+## Run
+```bash
+seminar.exe
+./seminar
+```
+---
+
 ## ADMIN Features
 - **Login system** (Username: 'admin', Password: '1234')
 - **Add** new participants
