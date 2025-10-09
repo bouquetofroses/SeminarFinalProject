@@ -21,11 +21,13 @@
 * `Seminar.csv`: ไฟล์ฐานข้อมูลตัวอย่าง
 ### Compile
 ```bash
-gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
+* `Windows`: gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
+* `macOS`: gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
 ```
 ### Run
 ```bash
-.\program.exe
+* `Windows`: .\program.exe
+* `macOS`: ./program
 ```
 ---
 
@@ -34,13 +36,13 @@ gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wext
 * `howtocompile.txt` : วิธีคอมไพล์
 ### Compile
 ```bash
-gcc SeminarFinalProjectall.c -o seminar
+* `Windows`:  gcc -o seminar.exe SeminarFinalProjectall.c
+* `macOS`: gcc -o seminar SeminarFinalProjectall.c
 ```
 ## Run
 ```bash
-seminar.exe
-หรือ
-./seminar
+* `Windows`: ./seminar.exe
+* `macOS`: ./seminar
 ```
 ---
 
