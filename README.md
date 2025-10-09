@@ -4,7 +4,7 @@
 ---
 
 ## Project Overview
-<<<<<<< HEAD
+
 
 =======
 ```bash
@@ -38,7 +38,6 @@
 - Run **UNIT TEST**
 - Run **E2E TEST**
 
-<<<<<<< HEAD
 =======
 ---
 
