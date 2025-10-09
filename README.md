@@ -29,7 +29,7 @@ gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wext
 ```
 ---
 
-## 📁 main unit and e2e test ( กรณีฉุกเฉิน )
+## 📁 main unit and e2e test ( ไม่ได้แยก unit test และ E2E test )
 * `SeminarFinalProjectall.c`: โค้ดโปรแกรมหลัก + unit test + E2E test
 * `howtocompile.txt` : วิธีคอมไพล์
 ### Compile
