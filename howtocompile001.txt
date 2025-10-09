@@ -7,11 +7,14 @@
 * `project.h`: Header File กลางของโปรเจกต์
 * `Seminar.csv`: ไฟล์ฐานข้อมูลตัวอย่าง\
 
-compile
-gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
+### Compile
+* `Windows`: gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
+* `macOS`: gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
 
-run
-.\program.exe
+### Run
+* `Windows`: .\program.exe
+* `macOS`: ./program
+
 
 **หนูกลัวว่าถ้าแยกไฟล์ unit test และ E2E test แล้วตอนคอมไพล์มันจะ error 
 เลยมีไฟล์โปรแกรมรวมไว้ในโฟลเดอร์ เป็นโปรแกรมหลักรวมกับ unit test และ E2E test
