@@ -23,7 +23,7 @@
 ##  How to Compile & Run
 ### Compile
 ```bash
-gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall\
+gcc -o program SeminarFinalProject.c unit_test.c e2e_test.c test_helpers.c -Wextra -Wall
 ```
 ### Run
 ```bash
